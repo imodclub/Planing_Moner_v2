@@ -9,16 +9,31 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@emotion/react": "^11.13.3",
+    "@emotion/styled": "^11.13.0",
+    "@mui/icons-material": "^6.0.2",
+    "@mui/material": "^6.0.2",
+    "@mui/x-date-pickers": "^7.16.0",
+    "bcrypt": "^5.1.1",
+    "dayjs": "^1.11.13",
+    "dotenv": "^16.4.5",
+    "js-cookie": "^3.0.5",
+    "mongodb": "^6.8.1",
+    "mongoose": "^8.6.1",
+    "next": "14.2.8",
     "react": "^18",
     "react-dom": "^18",
-    "next": "14.2.8"
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@types/bcrypt": "^5.0.2",
+    "@types/js-cookie": "^3.0.6",
     "@types/node": "^20",
-    "@types/react": "^18",
+    "@types/react": "^18.3.5",
     "@types/react-dom": "^18",
+    "@types/uuid": "^10.0.0",
     "eslint": "^8",
-    "eslint-config-next": "14.2.8"
+    "eslint-config-next": "14.2.8",
+    "typescript": "^5"
   }
 }

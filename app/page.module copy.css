@@ -15,10 +15,6 @@
   gap: 64px;
   font-family: var(--font-geist-sans);
 }
-.appbar {
-  display: grid;
-  width: 600;
-}
 
 @media (prefers-color-scheme: dark) {
   .page {
@@ -34,9 +30,7 @@
 .main {
   display: flex;
   flex-direction: column;
-  gap: 64px;
-  width: auto;
-  padding: 20px;
+  gap: 32px;
   grid-row-start: 2;
 }
 
@@ -111,8 +105,6 @@ a.secondary {
   flex-shrink: 0;
 }
 
-
-
 /* Enable hover only on non-touch devices */
 @media (hover: hover) and (pointer: fine) {
   a.primary:hover {
@@ -171,4 +163,3 @@ a.secondary {
     filter: invert();
   }
 }
-
