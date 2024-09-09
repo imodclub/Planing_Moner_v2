@@ -49,17 +49,52 @@ const ExpensesForm = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [sessionId, setSessionId] = useState('');
+  const [userId, setUserId] = useState('');
+  const [userName, setUserName] = useState('');
   const isFetched = useRef(false);
 
-  //ค้นหา session ID
+  // ดึง sessionID จากคุกกี้เมื่อโหลดหน้า
   useEffect(() => {
-    // ดึง sessionID จากคุกกี้เมื่อโหลดหน้า
     const sessionIdFromCookie = Cookies.get('sessionID');
     if (sessionIdFromCookie) {
       setSessionId(sessionIdFromCookie);
-      console.log('fect session id from expenses ', sessionIdFromCookie);
+      console.log('Fetched sessionID from cookie:', sessionIdFromCookie);
     }
   }, []);
+
+  // Fetch expense data เมื่อ sessionId ถูกตั้งค่า และ isFetched เป็น false
+  useEffect(() => {
+    if (sessionId && !isFetched.current) {
+      const fetchUserId = async () => {
+        try {
+          // เรียก API เพื่อค้นหา userID จาก sessionID
+          const userIdResponse = await fetch(`/api/session/${sessionId}`);
+          if (!userIdResponse.ok) {
+            console.error('Failed to fetch userID');
+            return;
+          }
+
+          const { userId } = await userIdResponse.json();
+          setUserId(userId);
+
+          const userNameResponse = await fetch(`/api/users/${userId}`);
+          if (!userNameResponse) {
+            console.error('Failed to fetch userName');
+            return;
+          }
+
+          const { name } = await userNameResponse.json();
+          setUserName(name);
+       
+        } catch (error) {
+          console.error('Error fetching expense data:', error);
+        }
+        isFetched.current = true;
+      };
+
+      fetchUserId();
+    }
+  }, [sessionId, isFetched]); // Added isFetched to the dependency array
 
   const handleAmountChange = (index: number, value: string) => {
     const updatedItems = [...expenseItems];
@@ -90,107 +125,47 @@ const ExpensesForm = () => {
   };
 
   const handleSave = async () => {
-    // เรียก API เพื่อค้นหา userID จาก sessionID
-    const userIdResponse = await fetch('/api/get-user-id', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ sessionId }),
-    });
-
-    if (!userIdResponse.ok) {
-      console.error('Failed to fetch userID');
+    if (!userId) {
       setDialogOpen(true);
       return;
     }
 
-    const { userId } = await userIdResponse.json();
+    try {
+      const formattedDate = date.toISOString().split('T')[0];
+      const timestamp = new Date().toISOString();
+      const response = await fetch('/api/save-expenses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          date: formattedDate,
+          expenseItems,
+          userId, // ใช้ userId ที่เก็บไว้ใน state
+          timestamp,
+        }),
+      });
 
-    const formattedDate = date.toISOString().split('T')[0];
-    const timestamp = new Date().toISOString();
-    const response = await fetch('/api/save-expenses', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        date: formattedDate,
-        expenseItems,
-        userId, // ใช้ userId ที่ได้จากการค้นหา
-        timestamp,
-      }),
-    });
-
-    if (response.ok) {
-      setSuccessDialogOpen(true);
-      setExpenseItems([
-        { label: 'ค่าผ่อนบ้าน', amount: '', comment: '' },
-        { label: 'ค่าผ่อนรถ', amount: '', comment: '' },
-        { label: 'ค่าผ่อนสหกรณ์', amount: '', comment: '' },
-        { label: 'ค่าบัตรเครดิตสินเชื่อเงินสด', amount: '', comment: '' },
-        { label: 'ค่าผ่อนสินค้า', amount: '', comment: '' },
-        { label: 'ค่าไฟฟ้า', amount: '', comment: '' },
-        { label: 'ค่าอินเตอร์เน็ตบ้าน', amount: '', comment: '' },
-        { label: 'ค่าโทรศัพท์มือถือ', amount: '', comment: '' },
-        { label: 'จ่ายลูกไปโรงเรียน', amount: '', comment: '' },
-        { label: 'ค่าน้ำมัน', amount: '', comment: '' },
-      ]);
+      if (response.ok) {
+        setSuccessDialogOpen(true);
+        setExpenseItems([
+          { label: 'ค่าผ่อนบ้าน', amount: '', comment: '' },
+          { label: 'ค่าผ่อนรถ', amount: '', comment: '' },
+          { label: 'ค่าผ่อนสหกรณ์', amount: '', comment: '' },
+          { label: 'ค่าบัตรเครดิตสินเชื่อเงินสด', amount: '', comment: '' },
+          { label: 'ค่าผ่อนสินค้า', amount: '', comment: '' },
+          { label: 'ค่าไฟฟ้า', amount: '', comment: '' },
+          { label: 'ค่าอินเตอร์เน็ตบ้าน', amount: '', comment: '' },
+          { label: 'ค่าโทรศัพท์มือถือ', amount: '', comment: '' },
+          { label: 'จ่ายลูกไปโรงเรียน', amount: '', comment: '' },
+          { label: 'ค่าน้ำมัน', amount: '', comment: '' },
+        ]);
+      }
+    } catch (error) {
+      console.error('Error saving expenses:', error);
+      setDialogOpen(true);
     }
   };
-
-  useEffect(() => {
-    const fetchExpenseData = async () => {
-      if (!sessionId) {
-        console.error('No sessionId found');
-        return;
-      }
-
-      if (!isFetched.current) {
-        try {
-          // เรียก API เพื่อค้นหา userID จาก sessionID
-          const userIdResponse = await fetch(`/api/session/${sessionId}`);
-          if (!userIdResponse.ok) {
-            console.error('Failed to fetch userID');
-            return;
-          }
-
-          const { userId } = await userIdResponse.json();
-
-          const response = await fetch(`/api/expense-data/${userId}`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.length > 0) {
-              const latestDocument = data[data.length - 1];
-              const newExpenseItems: ExpenseItem[] = latestDocument.items.map(
-                (item: any) => ({
-                  label: item.label,
-                  amount: '',
-                  comment: '',
-                })
-              );
-              const existingLabels = expenseItems.map(
-                (item: ExpenseItem) => item.label
-              );
-              const uniqueItems = newExpenseItems.filter(
-                (item: ExpenseItem) => !existingLabels.includes(item.label)
-              );
-              setExpenseItems([...expenseItems, ...uniqueItems]);
-            } else {
-              console.log('No documents found for this userId.');
-            }
-          } else {
-            console.error('Error fetching expense data:', response.status);
-          }
-        } catch (error) {
-          console.error('Error fetching expense data:', error);
-        }
-        isFetched.current = true;
-      }
-    };
-
-    fetchExpenseData();
-  }, [sessionId]); // เพิ่ม sessionId เป็น dependency
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
@@ -204,7 +179,7 @@ const ExpensesForm = () => {
     <Container component="main" maxWidth="sm">
       <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          บันทึกรายจ่าย
+          บันทึกรายจ่าย ของคุณ  {userName}
         </Typography>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <DatePicker
