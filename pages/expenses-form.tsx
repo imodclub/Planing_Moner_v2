@@ -11,6 +11,7 @@ import {
   DialogActions,
   Container,
 } from '@mui/material';
+import Cookies from 'js-cookie';
 import Grid from '@mui/material/Grid2';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
@@ -47,7 +48,18 @@ const ExpensesForm = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [sessionId, setSessionId] = useState('');
   const isFetched = useRef(false);
+
+  //ค้นหา session ID
+  useEffect(() => {
+    // ดึง sessionID จากคุกกี้เมื่อโหลดหน้า
+    const sessionIdFromCookie = Cookies.get('sessionID');
+    if (sessionIdFromCookie) {
+      setSessionId(sessionIdFromCookie);
+      console.log('fect session id from expenses ', sessionIdFromCookie);
+    }
+  }, []);
 
   const handleAmountChange = (index: number, value: string) => {
     const updatedItems = [...expenseItems];
@@ -78,11 +90,22 @@ const ExpensesForm = () => {
   };
 
   const handleSave = async () => {
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
+    // เรียก API เพื่อค้นหา userID จาก sessionID
+    const userIdResponse = await fetch('/api/get-user-id', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ sessionId }),
+    });
+
+    if (!userIdResponse.ok) {
+      console.error('Failed to fetch userID');
       setDialogOpen(true);
       return;
     }
+
+    const { userId } = await userIdResponse.json();
 
     const formattedDate = date.toISOString().split('T')[0];
     const timestamp = new Date().toISOString();
@@ -94,7 +117,7 @@ const ExpensesForm = () => {
       body: JSON.stringify({
         date: formattedDate,
         expenseItems,
-        userId,
+        userId, // ใช้ userId ที่ได้จากการค้นหา
         timestamp,
       }),
     });
@@ -118,14 +141,22 @@ const ExpensesForm = () => {
 
   useEffect(() => {
     const fetchExpenseData = async () => {
-      const userId = localStorage.getItem('userId');
-      if (!userId) {
-        console.error('No userId found in LocalStorage');
+      if (!sessionId) {
+        console.error('No sessionId found');
         return;
       }
 
       if (!isFetched.current) {
         try {
+          // เรียก API เพื่อค้นหา userID จาก sessionID
+          const userIdResponse = await fetch(`/api/session/${sessionId}`);
+          if (!userIdResponse.ok) {
+            console.error('Failed to fetch userID');
+            return;
+          }
+
+          const { userId } = await userIdResponse.json();
+
           const response = await fetch(`/api/expense-data/${userId}`);
           if (response.ok) {
             const data = await response.json();
@@ -159,7 +190,7 @@ const ExpensesForm = () => {
     };
 
     fetchExpenseData();
-  }, [expenseItems]);
+  }, [sessionId]); // เพิ่ม sessionId เป็น dependency
 
   const handleCloseDialog = () => {
     setDialogOpen(false);

@@ -14,85 +14,89 @@ import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import Cookies from 'js-cookie';
+
 
 const MyAppBar = () => {
-     const router = useRouter();
+  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-     useEffect(() => {
-       const sessionId = localStorage.getItem('sessionID');
-       if (sessionId) {
-         setIsLoggedIn(true);
-       }
-     }, []);
+  useEffect(() => {
+    // ดึง sessionID จากคุกกี้ในฝั่งไคลเอนต์
+    const sessionId = Cookies.get('sessionID');
+    console.log('Session ID:', sessionId);
 
-     const handleButtonClick = async () => {
-       if (isLoggedIn) {
-         // Logout: ลบ sessionID ทั้งในเครื่องและในฐานข้อมูล
-         const sessionId = localStorage.getItem('sessionID');
-         if (sessionId) {
-           await fetch('/api/logout', {
-             method: 'POST',
-             headers: {
-               'Content-Type': 'application/json',
-             },
-             body: JSON.stringify({ sessionId }),
-           });
-           localStorage.removeItem('sessionID');
-           setIsLoggedIn(false);
-           router.push('/sign-in');
-         }
-       } else {
-         // Login: ตรวจสอบ sessionID และเปลี่ยนเส้นทางไปยัง dashboard
-         const sessionId = localStorage.getItem('sessionID');
-         if (sessionId) {
-           router.push('/dashboard');
-         } else {
-           router.push('/sign-in');
-         }
-       }
-     };
-  
-   const toggleDrawer =
-     (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
-       if (
-         event.type === 'keydown' &&
-         ((event as React.KeyboardEvent).key === 'Tab' ||
-           (event as React.KeyboardEvent).key === 'Shift')
-       ) {
-         return;
-       }
-       setDrawerOpen(open);
-     };
+    if (sessionId) {
+      setIsLoggedIn(true);
+    }
+  }, []);
 
-   const drawerList = () => (
-     <Box
-       sx={{ width: 250 }}
-       role="presentation"
-       onClick={toggleDrawer(false)}
-       onKeyDown={toggleDrawer(false)}
-     >
-       <List>
-         <ListItem component="a" href="/">
-           <ListItemText primary="Home" />
-         </ListItem>
-         <ListItem component="a" href="/profile">
-           <ListItemText primary="Profile" />
-         </ListItem>
-         <ListItem component="a" href="/settings">
-           <ListItemText primary="Settings" />
-         </ListItem>
-       </List>
-       <Divider />
-       <List>
-         <ListItem component="a" href="/logout">
-           <ListItemText primary="Logout" />
-         </ListItem>
-       </List>
-     </Box>
-   );
-  
+  const handleButtonClick = async () => {
+    if (isLoggedIn) {
+      // Logout: ลบ sessionID ในคุกกี้และในฐานข้อมูล
+      const sessionId = Cookies.get('sessionID');
+      if (sessionId) {
+        await fetch('/api/logout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ sessionId }),
+        });
+        Cookies.remove('sessionID'); // ลบ sessionID จากคุกกี้
+        setIsLoggedIn(false);
+        router.push('/sign-in');
+      }
+    } else {
+      // Login: ตรวจสอบ sessionID และเปลี่ยนเส้นทางไปยัง dashboard
+      const sessionId = Cookies.get('sessionID');
+      if (sessionId) {
+        router.push('/dashboard');
+      } else {
+        router.push('/sign-in');
+      }
+    }
+  };
+
+  const toggleDrawer =
+    (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
+      if (
+        event.type === 'keydown' &&
+        ((event as React.KeyboardEvent).key === 'Tab' ||
+          (event as React.KeyboardEvent).key === 'Shift')
+      ) {
+        return;
+      }
+      setDrawerOpen(open);
+    };
+
+  const drawerList = () => (
+    <Box
+      sx={{ width: 250 }}
+      role="presentation"
+      onClick={toggleDrawer(false)}
+      onKeyDown={toggleDrawer(false)}
+    >
+      <List>
+        <ListItem component="a" href="/">
+          <ListItemText primary="Home" />
+        </ListItem>
+        <ListItem component="a" href="/profile">
+          <ListItemText primary="Profile" />
+        </ListItem>
+        <ListItem component="a" href="/settings">
+          <ListItemText primary="Settings" />
+        </ListItem>
+      </List>
+      <Divider />
+      <List>
+        <ListItem component="a" href="/logout">
+          <ListItemText primary="Logout" />
+        </ListItem>
+      </List>
+    </Box>
+  );
 
   return (
     <Box sx={{ flexGrow: 1 }}>
