@@ -23,6 +23,7 @@ interface IncomeItem {
   label: string;
   amount: string;
   comment: string;
+  timestamp?: string;
 }
 
 const IncomesForm = () => {
@@ -81,6 +82,61 @@ const IncomesForm = () => {
           const { name } = await userNameResponse.json();
           setUserName(name);
 
+          const fetchIncomeItem = await fetch(`/api/save-incomes/${userId}`);
+
+          if (!fetchIncomeItem.ok) {
+            console.error('Failed to fetch user on incomes');
+            return;
+          }
+
+          const fetchIncomeItemResponse = await fetchIncomeItem.json();
+          console.log('ค่าที่ได้ จาก save-income ', fetchIncomeItemResponse);
+
+          const items = fetchIncomeItemResponse.items;
+          // ตรวจสอบว่าข้อมูลที่ได้รับเป็นอาร์เรย์
+          if (!Array.isArray(items)) {
+            console.error('Data is not an array');
+            return;
+          }
+
+          // ค้นหารายการที่มีการบันทึกครั้งล่าสุด
+          const latestItem = items.reduce(
+            (latest: IncomeItem, item: IncomeItem) => {
+              const latestTimestamp = latest.timestamp
+                ? new Date(latest.timestamp)
+                : new Date(0);
+              const itemTimestamp = item.timestamp
+                ? new Date(item.timestamp)
+                : new Date(0);
+              return itemTimestamp > latestTimestamp ? item : latest;
+            },
+            items[0]
+          );
+
+          console.log('Item Label ล่าสุด:', latestItem.label);
+
+          // ตรวจสอบและเพิ่มรายการใหม่
+          setIncomeItems((prevItems) => {
+            const existingLabels = prevItems.map(
+              (item: IncomeItem) => item.label
+            );
+
+            // ตรวจสอบว่า latestItem.items เป็นอาร์เรย์
+            const newItems = Array.isArray(latestItem.items)
+              ? latestItem.items.filter(
+                  (item: IncomeItem) => !existingLabels.includes(item.label)
+                )
+              : [];
+
+            return [
+              ...prevItems,
+              ...newItems.map((item: IncomeItem) => ({
+                label: item.label,
+                amount: '',
+                comment: '',
+              })),
+            ];
+          });
         } catch (error) {
           console.error('Error fetching expense data:', error);
         }
@@ -138,7 +194,7 @@ const IncomesForm = () => {
         },
         body: JSON.stringify({
           date: formattedDate,
-          incomeItems,
+          items:incomeItems,
           userId, // ใช้ userId ที่เก็บไว้ใน state
           timestamp,
         }),

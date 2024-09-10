@@ -99,44 +99,7 @@ const IncomesForm = () => {
             return;
           }
 
-          // ค้นหารายการที่มีการบันทึกครั้งล่าสุด
-          const latestItem = items.reduce(
-            (latest: IncomeItem, item: IncomeItem) => {
-              const latestTimestamp = latest.timestamp
-                ? new Date(latest.timestamp)
-                : new Date(0);
-              const itemTimestamp = item.timestamp
-                ? new Date(item.timestamp)
-                : new Date(0);
-              return itemTimestamp > latestTimestamp ? item : latest;
-            },
-            items[0]
-          );
-
-          console.log('Item Label ล่าสุด:', latestItem.label);
-
-          // ตรวจสอบและเพิ่มรายการใหม่
-          setIncomeItems((prevItems) => {
-            const existingLabels = prevItems.map(
-              (item: IncomeItem) => item.label
-            );
-
-            // ตรวจสอบว่า latestItem.items เป็นอาร์เรย์
-            const newItems = Array.isArray(latestItem.items)
-              ? latestItem.items.filter(
-                  (item: IncomeItem) => !existingLabels.includes(item.label)
-                )
-              : [];
-
-            return [
-              ...prevItems,
-              ...newItems.map((item: IncomeItem) => ({
-                label: item.label,
-                amount: '',
-                comment: '',
-              })),
-            ];
-          });
+          
         } catch (error) {
           console.error('Error fetching expense data:', error);
         }
@@ -164,14 +127,42 @@ const IncomesForm = () => {
     setIncomeItems(updatedItems);
   };
 
-  const handleAddItem = () => {
-    if (newItem.label && newItem.amount) {
-      
-        setIncomeItems([...incomeItems, newItem]);
-        setNewItem({ label: '', amount: '', comment: '' });
-      
+const handleAddItem = async () => {
+  if (newItem.label && newItem.amount) {
+    // อัปเดตรายการใน local state
+    setIncomeItems([...incomeItems, newItem]);
+
+    // สร้างข้อมูลใหม่เพื่อส่งไปยัง API
+    const payload = {
+      userId: userId, // คุณต้องใช้ userId ที่แท้จริงตรงนี้
+      items: [...incomeItems, newItem], // รายการทั้งหมดที่จะบันทึก
+    };
+
+    try {
+      // เรียก API เพื่อบันทึกข้อมูลไปยังฐานข้อมูล
+      const response = await fetch('/api/income-list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log(result.message); // แสดงผลลัพธ์ใน console
+      } else {
+        console.error('Failed to save income list');
+      }
+    } catch (error) {
+      console.error('Error:', error);
     }
-  };
+
+    // รีเซ็ตข้อมูล newItem
+    setNewItem({ label: '', amount: '', comment: '' });
+  }
+};
+
 
   const handleDeleteItem = (index: number) => {
     const updatedItems = incomeItems.filter((_, i) => i !== index);
