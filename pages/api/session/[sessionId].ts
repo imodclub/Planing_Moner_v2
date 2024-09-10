@@ -4,6 +4,7 @@ import dbConnect from '@/models/db';
 import Session from '@/models/session.model';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  await dbConnect(); // เชื่อมต่อกับฐานข้อมูล
   const { sessionId } = req.query;
 
   if (req.method !== 'GET') {

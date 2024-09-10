@@ -1,4 +1,4 @@
-// pages/api/save-expenses.ts
+// pages/api/save-income-type.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '@/models/db';
 import IncomeType from '@/models/incomes-type.model';
@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     try {
       const newIncomeType = new IncomeType({
         userId,  
-        items: incomeItem,
+        incomeItem,
       });
 
       await newIncomeType.save();
