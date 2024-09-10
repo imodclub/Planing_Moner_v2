@@ -1,4 +1,4 @@
-
+// models/incomes.model.ts
 import mongoose from 'mongoose';
 
 const incomeSchema = new mongoose.Schema({
@@ -20,7 +20,7 @@ const incomeSchema = new mongoose.Schema({
       label: {
         type: String,
         required: true,
-        default: '', // กำหนดค่าเริ่มต้นเป็นสตริงว่าง
+        default: '',
       },
       amount: {
         type: Number,
@@ -35,6 +35,7 @@ const incomeSchema = new mongoose.Schema({
     },
   ],
 });
+
 const Income = mongoose.models.Income || mongoose.model('Income', incomeSchema);
 
 export default Income;

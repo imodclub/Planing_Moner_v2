@@ -7,14 +7,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   await dbConnect();
 
   if (req.method === 'POST') {
-    const { date, incomeItem, userId, timestamp } = req.body;
+    const { date, items, userId, timestamp } = req.body;
 
     try {
       const newIncome = new Income({
         userId,
         date,
         timestamp,
-        items: incomeItem,
+        items: items,
       });
 
       await newIncome.save();
