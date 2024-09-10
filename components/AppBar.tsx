@@ -10,16 +10,18 @@ import MenuIcon from '@mui/icons-material/Menu';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Cookies from 'js-cookie';
+import { useDrawer } from '@/context/DrawerContext';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
 
-interface AppBarProps {
-  toggleDrawer: (
-    open: boolean
-  ) => (event: React.KeyboardEvent | React.MouseEvent) => void;
-}
-
-const MyAppBar: React.FC<AppBarProps> = ({ toggleDrawer }) => {
+const MyAppBar: React.FC = () => {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { toggleDrawer } = useDrawer();
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
     const sessionId = Cookies.get('sessionID');
@@ -29,6 +31,19 @@ const MyAppBar: React.FC<AppBarProps> = ({ toggleDrawer }) => {
       setIsLoggedIn(true);
     }
   }, []);
+
+  const handleToggleDrawer = () => {
+    const sessionId = Cookies.get('sessionID');
+    if (!sessionId) {
+      setDialogOpen(true);
+    } else {
+      toggleDrawer();
+    }
+  };
+
+  const handleDialogClose = () => {
+    setDialogOpen(false);
+  };
 
   const handleButtonClick = async () => {
     if (isLoggedIn) {
@@ -63,14 +78,14 @@ const MyAppBar: React.FC<AppBarProps> = ({ toggleDrawer }) => {
             edge="start"
             color="inherit"
             aria-label="menu"
-            onClick={toggleDrawer(true)}
+            onClick={handleToggleDrawer}
           >
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            <Link href="/" legacyBehavior>
-              <a style={{ color: 'white', textDecoration: 'none' }}>HOME</a>
-            </Link>
+            
+              <a style={{ color: 'white', textDecoration: 'none' }}>โปรแกรมรายรับรายจ่าย</a>
+           
           </Typography>
 
           <Link href="/sign-in" passHref>
@@ -84,6 +99,19 @@ const MyAppBar: React.FC<AppBarProps> = ({ toggleDrawer }) => {
           </Link>
         </Toolbar>
       </AppBar>
+      <Dialog open={dialogOpen} onClose={handleDialogClose}>
+        <DialogTitle>กรุณาลงชื่อเข้าระบบ</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            กรุณาลงชื่อเข้าระบบเพื่อใช้งานฟังก์ชันนี้
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} color="primary">
+            ตกลง
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
