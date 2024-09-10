@@ -1,5 +1,5 @@
-import * as React from 'react';
-import { useState, useEffect } from 'react';
+// components/AppBar.tsx
+import React, { useState, useEffect } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Toolbar from '@mui/material/Toolbar';
@@ -7,23 +7,21 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
-import Drawer from '@mui/material/Drawer';
-import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
-import Divider from '@mui/material/Divider';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Cookies from 'js-cookie';
 
+interface AppBarProps {
+  toggleDrawer: (
+    open: boolean
+  ) => (event: React.KeyboardEvent | React.MouseEvent) => void;
+}
 
-const MyAppBar = () => {
+const MyAppBar: React.FC<AppBarProps> = ({ toggleDrawer }) => {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    // ดึง sessionID จากคุกกี้ในฝั่งไคลเอนต์
     const sessionId = Cookies.get('sessionID');
     console.log('Session ID:', sessionId);
 
@@ -34,7 +32,6 @@ const MyAppBar = () => {
 
   const handleButtonClick = async () => {
     if (isLoggedIn) {
-      // Logout: ลบ sessionID ในคุกกี้และในฐานข้อมูล
       const sessionId = Cookies.get('sessionID');
       if (sessionId) {
         await fetch('/api/logout', {
@@ -44,12 +41,11 @@ const MyAppBar = () => {
           },
           body: JSON.stringify({ sessionId }),
         });
-        Cookies.remove('sessionID'); // ลบ sessionID จากคุกกี้
+        Cookies.remove('sessionID');
         setIsLoggedIn(false);
         router.push('/sign-in');
       }
     } else {
-      // Login: ตรวจสอบ sessionID และเปลี่ยนเส้นทางไปยัง dashboard
       const sessionId = Cookies.get('sessionID');
       if (sessionId) {
         router.push('/dashboard');
@@ -58,45 +54,6 @@ const MyAppBar = () => {
       }
     }
   };
-
-  const toggleDrawer =
-    (open: boolean) => (event: React.KeyboardEvent | React.MouseEvent) => {
-      if (
-        event.type === 'keydown' &&
-        ((event as React.KeyboardEvent).key === 'Tab' ||
-          (event as React.KeyboardEvent).key === 'Shift')
-      ) {
-        return;
-      }
-      setDrawerOpen(open);
-    };
-
-  const drawerList = () => (
-    <Box
-      sx={{ width: 250 }}
-      role="presentation"
-      onClick={toggleDrawer(false)}
-      onKeyDown={toggleDrawer(false)}
-    >
-      <List>
-        <ListItem component="a" href="/">
-          <ListItemText primary="Home" />
-        </ListItem>
-        <ListItem component="a" href="/profile">
-          <ListItemText primary="Profile" />
-        </ListItem>
-        <ListItem component="a" href="/settings">
-          <ListItemText primary="Settings" />
-        </ListItem>
-      </List>
-      <Divider />
-      <List>
-        <ListItem component="a" href="/logout">
-          <ListItemText primary="Logout" />
-        </ListItem>
-      </List>
-    </Box>
-  );
 
   return (
     <Box sx={{ flexGrow: 1 }}>
@@ -126,9 +83,6 @@ const MyAppBar = () => {
             </Button>
           </Link>
         </Toolbar>
-        <Drawer anchor="left" open={drawerOpen} onClose={toggleDrawer(false)}>
-          {drawerList()}
-        </Drawer>
       </AppBar>
     </Box>
   );
