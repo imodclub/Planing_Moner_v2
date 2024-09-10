@@ -6,6 +6,10 @@ const incomesListSchema = new mongoose.Schema({
     required: true,
     ref: 'User',  // ต้องแน่ใจว่ามีโมเดล User ถูกต้อง
   },
+timestamp: {
+    type: Date,
+    default: Date.now,
+  },
   items: [
     {
       label: {

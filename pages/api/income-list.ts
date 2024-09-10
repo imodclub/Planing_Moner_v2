@@ -7,11 +7,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   await dbConnect();
 
   if (req.method === 'POST') {
-    const { items, userId } = req.body;
+    const { items, userId,timestamp } = req.body;
 
     try {
       const newIncomeList = new IncomeList({
-        userId,
+          userId,
+          timestamp,
         items: items,
       });
 
