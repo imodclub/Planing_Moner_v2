@@ -83,9 +83,9 @@ const MyAppBar: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            
+            <Link href="/" legacyBehavior>
               <a style={{ color: 'white', textDecoration: 'none' }}>โปรแกรมรายรับรายจ่าย</a>
-           
+            </Link>
           </Typography>
 
           <Link href="/sign-in" passHref>

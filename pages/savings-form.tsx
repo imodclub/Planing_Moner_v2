@@ -18,21 +18,21 @@ import dayjs, { Dayjs } from 'dayjs';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 
-interface IncomeItem {
+interface savingItem {
   label: string;
   amount: string;
   comment: string;
 }
 
-const IncomesForm = () => {
+const SavingsForm = () => {
   const [date, setDate] = useState<Dayjs>(dayjs());
-  const [incomeItems, setIncomeItems] = useState<IncomeItem[]>([
-    { label: 'เงินเดือน', amount: '', comment: '' },
-    { label: 'โบนัส', amount: '', comment: '' },
-    { label: 'รายได้เสริม', amount: '', comment: '' },
+  const [savingItems, setsavingItems] = useState<savingItem[]>([
+    { label: 'เงินฝาก', amount: '', comment: '' },
+    { label: 'หุ้นออม', amount: '', comment: '' },
+    { label: 'กองทุน', amount: '', comment: '' },
   ]);
 
-  const [newItem, setNewItem] = useState<IncomeItem>({
+  const [newItem, setNewItem] = useState<savingItem>({
     label: '',
     amount: '',
     comment: '',
@@ -79,7 +79,6 @@ const IncomesForm = () => {
 
           const { name } = await userNameResponse.json();
           setUserName(name);
-
         } catch (error) {
           console.error('Error fetching expense data:', error);
         }
@@ -90,40 +89,10 @@ const IncomesForm = () => {
     }
   }, [sessionId, isFetched]); // Added isFetched to the dependency array
 
-  const fetchIncomeTypes = async (userId: string) => {
-    try {
-      const response = await fetch(`/api/income-type/${userId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch income types');
-      }
-  
-      const incomeTypes = await response.json();
-      // ใช้ข้อมูล incomeTypes ในการจัดการต่อไป
-      console.log(incomeTypes);
-      // ตัวอย่าง: อัปเดตสถานะ state
-      setIncomeItems((prevItems) => {
-        const existingLabels = prevItems.map(item => item.label);
-        const uniqueItems = incomeTypes.filter(
-          (item: IncomeItem) => !existingLabels.includes(item.label)
-        );
-        return [...prevItems, ...uniqueItems];
-      });
-    } catch (error) {
-      console.error('Error fetching income types:', error);
-    }
-  };
-  
-  // เรียกใช้ฟังก์ชันเมื่อจำเป็น เช่น ใน useEffect
-  useEffect(() => {
-    if (userId) {
-      fetchIncomeTypes(userId);
-    }
-  }, [userId]);
-
   const handleAmountChange = (index: number, value: string) => {
-    const updatedItems = [...incomeItems];
+    const updatedItems = [...savingItems];
     updatedItems[index].amount = value.replace(/,/g, '');
-    setIncomeItems(updatedItems);
+    setsavingItems(updatedItems);
   };
 
   const formatAmount = (amount: string) => {
@@ -131,35 +100,21 @@ const IncomesForm = () => {
   };
 
   const handleCommentChange = (index: number, value: string) => {
-    const updatedItems = [...incomeItems];
+    const updatedItems = [...savingItems];
     updatedItems[index].comment = value;
-    setIncomeItems(updatedItems);
+    setsavingItems(updatedItems);
   };
 
   const handleAddItem = () => {
     if (newItem.label && newItem.amount) {
-      // Save new item to database
-      fetch('/api/save-income-type', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId,
-          incomeType: newItem,
-        }),
-      })
-      .then(response => response.json())
-      .then(() => {
-        setIncomeItems([...incomeItems, newItem]);
-        setNewItem({ label: '', amount: '', comment: '' });
-      });
+      setsavingItems([...savingItems, newItem]);
+      setNewItem({ label: '', amount: '', comment: '' });
     }
   };
 
   const handleDeleteItem = (index: number) => {
-    const updatedItems = incomeItems.filter((_, i) => i !== index);
-    setIncomeItems(updatedItems);
+    const updatedItems = savingItems.filter((_, i) => i !== index);
+    setsavingItems(updatedItems);
   };
 
   const handleSave = async () => {
@@ -171,14 +126,14 @@ const IncomesForm = () => {
     try {
       const formattedDate = date.toISOString().split('T')[0];
       const timestamp = new Date().toISOString();
-      const response = await fetch('/api/save-incomes', {
+      const response = await fetch('/api/save-savings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           date: formattedDate,
-          incomeItems,
+          savingItems,
           userId, // ใช้ userId ที่เก็บไว้ใน state
           timestamp,
         }),
@@ -186,14 +141,14 @@ const IncomesForm = () => {
 
       if (response.ok) {
         setSuccessDialogOpen(true);
-        setIncomeItems([
+        setsavingItems([
           { label: 'เงินเดือน', amount: '', comment: '' },
           { label: 'โบนัส', amount: '', comment: '' },
           { label: 'รายได้เสริม', amount: '', comment: '' },
         ]);
       }
     } catch (error) {
-      console.error('Error saving incomes:', error);
+      console.error('Error saving Savings:', error);
       setDialogOpen(true);
     }
   };
@@ -210,7 +165,7 @@ const IncomesForm = () => {
     <Container component="main" maxWidth="sm">
       <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          บันทึกรายรับ ของคุณ  {userName}
+          บันทึกเงินออม ของคุณ  {userName}
         </Typography>
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <DatePicker
@@ -223,7 +178,7 @@ const IncomesForm = () => {
         />
       </LocalizationProvider>
       <Box sx={{ mt: 2 }}>
-        {incomeItems.map((item, index) => (
+        {savingItems.map((item, index) => (
           <Box
             sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}
             key={index}
@@ -323,4 +278,4 @@ const IncomesForm = () => {
   );
 };
 
-export default IncomesForm;
+export default SavingsForm;
