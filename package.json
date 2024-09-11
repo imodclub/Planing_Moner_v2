@@ -16,6 +16,7 @@
     "@mui/x-date-pickers": "^7.16.0",
     "bcrypt": "^5.1.1",
     "chart.js": "^4.4.4",
+    "cookie": "^0.6.0",
     "dayjs": "^1.11.13",
     "dotenv": "^16.4.5",
     "js-cookie": "^3.0.5",

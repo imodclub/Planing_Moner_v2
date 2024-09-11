@@ -1,5 +1,6 @@
 // components/AnnualFinancialSummaryChart.tsx
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useState, useRef } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -10,6 +11,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
+import Cookies from 'js-cookie';
 
 ChartJS.register(
   CategoryScale,
@@ -32,30 +34,64 @@ const AnnualFinancialSummaryChart: React.FC = () => {
     expenses: [],
     savings: [],
   });
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
+  const isFetched = useRef(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const incomeResponse = await fetch('/api/save-income');
-        const expensesResponse = await fetch('/api/save-expenses');
-        const savingsResponse = await fetch('/api/save-savings');
-
-        const incomeData = await incomeResponse.json();
-        const expensesData = await expensesResponse.json();
-        const savingsData = await savingsResponse.json();
-
-        setFinancialData({
-          income: incomeData,
-          expenses: expensesData,
-          savings: savingsData,
-        });
-      } catch (error) {
-        console.error('Error fetching financial data:', error);
-      }
-    };
-
-    fetchData();
+    const sessionIdFromCookie = Cookies.get('sessionID');
+    if (sessionIdFromCookie) {
+      setSessionId(sessionIdFromCookie);
+      console.log('Fetched sessionID from cookie:', sessionIdFromCookie);
+    } else {
+      console.error('No sessionId found in cookie');
+    }
   }, []);
+
+  useEffect(() => {
+    if (sessionId && !isFetched.current) {
+      const fetchData = async () => {
+        try {
+          // เรียก API เพื่อค้นหา userID จาก sessionID
+          const userIdResponse = await fetch(`/api/session/${sessionId}`);
+          if (!userIdResponse.ok) {
+            console.error('Failed to fetch userID');
+            return;
+          }
+
+          const { userId } = await userIdResponse.json();
+          setUserId(userId);
+
+          const userNameResponse = await fetch(`/api/users/${userId}`);
+          if (!userNameResponse.ok) {
+            console.error('Failed to fetch userName');
+            return;
+          }
+
+          const { name } = await userNameResponse.json();
+          setUserName(name);
+
+          // เรียก API เพื่อดึงข้อมูลการเงิน
+          const financialSummaryResponse = await fetch(
+            `/api/financial-summary/${userId}`
+          );
+          if (!financialSummaryResponse.ok) {
+            console.error('Failed to fetch financial summary');
+            return;
+          }
+
+          const data = await financialSummaryResponse.json();
+          setFinancialData(data);
+        } catch (error) {
+          console.error('Error fetching data:', error);
+        }
+        isFetched.current = true;
+      };
+
+      fetchData();
+    }
+  }, [sessionId]);
 
   const options = {
     responsive: true,
@@ -65,24 +101,24 @@ const AnnualFinancialSummaryChart: React.FC = () => {
       },
       title: {
         display: true,
-        text: 'รายงานสรุปการเงินประจำปี',
+        text: `รายงานสรุปการเงินประจำปีของ ${userName}`,
       },
     },
   };
 
   const labels = [
-    'มกราคม',
-    'กุมภาพันธ์',
-    'มีนาคม',
-    'เมษายน',
-    'พฤษภาคม',
-    'มิถุนายน',
-    'กรกฎาคม',
-    'สิงหาคม',
-    'กันยายน',
-    'ตุลาคม',
-    'พฤศจิกายน',
-    'ธันวาคม',
+    'ม.ค.',
+    'ก.พ.',
+    'มี.ค.',
+    'เม.ย.',
+    'พ.ค.',
+    'มิ.ย.',
+    'ก.ค.',
+    'ส.ค.',
+    'ก.ย.',
+    'ต.ค.',
+    'พ.ย.',
+    'ธ.ค.',
   ];
 
   const data = {
@@ -108,7 +144,7 @@ const AnnualFinancialSummaryChart: React.FC = () => {
 
   return (
     <div>
-      <h2>รายงานสรุปการเงินประจำปี</h2>
+      <h2>รายงานสรุปการเงินประจำปีของ {userName}</h2>
       <Bar options={options} data={data} />
     </div>
   );

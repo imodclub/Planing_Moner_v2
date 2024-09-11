@@ -195,7 +195,7 @@ const ExpensesForm = () => {
     try {
       const formattedDate = date.toISOString().split('T')[0];
       const timestamp = new Date().toISOString();
-      const response = await fetch('/api/save-expenses', {
+      const response = await fetch(`/api/expense/${userId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
