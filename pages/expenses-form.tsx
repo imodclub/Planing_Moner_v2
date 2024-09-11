@@ -84,6 +84,16 @@ const ExpensesForm = () => {
 
           const { name } = await userNameResponse.json();
           setUserName(name);
+
+          const fetchExpenseItem = await fetch(`/api/expense-list/${userId}`);
+
+          if (!fetchExpenseItem.ok) {
+            console.error('Failed to fetch user on expense');
+            return;
+          }
+
+          const fetchExpenseItemResponse = await fetchExpenseItem.json();
+          setExpenseItems(fetchExpenseItemResponse.items);
        
         } catch (error) {
           console.error('Error fetching expense data:', error);
@@ -111,17 +121,70 @@ const ExpensesForm = () => {
     setExpenseItems(updatedItems);
   };
 
-  const handleAddItem = () => {
+  const handleAddItem = async () => {
     if (newItem.label && newItem.amount) {
+      // อัปเดตรายการใน local state
       setExpenseItems([...expenseItems, newItem]);
+
+      // สร้างข้อมูลใหม่เพื่อส่งไปยัง API
+      const payload = {
+        userId: userId, // คุณต้องใช้ userId ที่แท้จริงตรงนี้
+        items: [...expenseItems, newItem], // รายการทั้งหมดที่จะบันทึก
+      };
+
+      try {
+        // เรียก API เพื่อบันทึกข้อมูลไปยังฐานข้อมูล
+        const response = await fetch('/api/expense-list', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          console.log(result.message); // แสดงผลลัพธ์ใน console
+        } else {
+          console.error('Failed to save expense list');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+
+      // รีเซ็ตข้อมูล newItem
       setNewItem({ label: '', amount: '', comment: '' });
     }
   };
 
-  const handleDeleteItem = (index: number) => {
-    const updatedItems = expenseItems.filter((_, i) => i !== index);
-    setExpenseItems(updatedItems);
+  const handleDeleteItem = async (index: number) => {
+    try {
+      // ลบ item จาก state ก่อน
+      const updatedItems = expenseItems.filter((_, i) => i !== index);
+      setExpenseItems(updatedItems);
+  
+      // ส่งคำขอ DELETE ไปยัง API เพื่อลบ item จากฐานข้อมูล
+      const response = await fetch(`/api/expense-list/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ index }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to delete item');
+      }
+  
+      // หากลบสำเร็จ อาจต้องการทำอะไรเพิ่มเติม เช่น แสดงข้อความแจ้งเตือน
+      console.log('Item deleted successfully');
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      // กรณีเกิดข้อผิดพลาด อาจต้องการกู้คืนสถานะเดิม
+      setExpenseItems([...expenseItems]);
+    }
   };
+  
 
   const handleSave = async () => {
     if (!userId) {

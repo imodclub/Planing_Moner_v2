@@ -3,6 +3,12 @@ import dbConnect from '@/models/db';
 import Income from '@/models/incomes.model';
 import mongoose from 'mongoose';
 
+interface Income {
+  label: string;
+  amount?: number | string;
+  comment?: string;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await dbConnect(); // เชื่อมต่อกับฐานข้อมูล
 
@@ -26,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // ดึงข้อมูล items ที่มี label
-    const itemsWithLabel = user.items.map((item: any) => ({
+    const itemsWithLabel = user.items.map((item: Income) => ({
       label: item.label,
       amount: item.amount || '',
       comment: item.comment || '',
