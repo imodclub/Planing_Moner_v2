@@ -3,6 +3,20 @@ import dbConnect from '@/models/db';
 import IncomeList from '@/models/incomes-list.model';
 import mongoose from 'mongoose';
 
+// กำหนด interface สำหรับ item ใน userIncomeList
+interface IncomeItem {
+  label: string;
+  amount?: number | string;
+  comment?: string;
+}
+
+// กำหนด type สำหรับ itemsWithLabel
+type ItemWithLabel = {
+  label: string;
+  amount: number | string;
+  comment: string;
+};
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   await dbConnect(); // เชื่อมต่อกับฐานข้อมูล
 
@@ -18,22 +32,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ message: 'Invalid userId format' });
     }
 
-    // ค้นหาข้อมูลโดยใช้ฟิลด์ userId
-    const userIncomeList = await IncomeList.findOne({ userId: userId });
+    // ค้นหาข้อมูลล่าสุดโดยใช้ฟิลด์ userId
+    const latestIncomeList = await IncomeList.findOne({ userId: userId })
+      .sort({ _id: -1 }) // เรียงลำดับตาม _id จากใหม่ไปเก่า
+      .select('items createdAt _id'); // เลือกเฉพาะฟิลด์ที่ต้องการ
 
-    if (!userIncomeList) {
+    console.log('Latest Income List:', latestIncomeList); // ล็อกข้อมูลเพื่อตรวจสอบ
+
+    if (!latestIncomeList) {
       return res.status(404).json({ message: 'Income list not found for this user' });
     }
 
     // ดึงข้อมูล items
-    const itemsWithLabel = userIncomeList.items.map((item: any) => ({
+    const itemsWithLabel: ItemWithLabel[] = latestIncomeList.items.map((item: IncomeItem) => ({
       label: item.label,
-      amount: item.amount || '', // ตรวจสอบว่ามีค่าหรือไม่
-      comment: item.comment || '', // ตรวจสอบว่ามีค่าหรือไม่
+      amount:  '',
+      comment: item.comment ?? '', // ใช้ nullish coalescing operator
     }));
 
-    // ส่งข้อมูล items กลับไป (ไม่จำเป็นต้องมี name หากไม่ได้เชื่อมโยงโมเดล User)
-    return res.status(200).json({ items: itemsWithLabel });
+    // ส่งข้อมูล items กลับไป
+    return res.status(200).json({ 
+      items: itemsWithLabel,
+      createdAt: latestIncomeList.createdAt,
+      _id: latestIncomeList._id
+    });
 
   } catch (error) {
     console.error('Error fetching user items:', error);

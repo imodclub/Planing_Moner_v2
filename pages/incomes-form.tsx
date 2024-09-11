@@ -91,53 +91,8 @@ const IncomesForm = () => {
           }
 
           const fetchIncomeItemResponse = await fetchIncomeItem.json();
-          console.log('ค่าที่ได้ จาก income-list ', fetchIncomeItemResponse);
-
-          const items = fetchIncomeItemResponse.items;
-          // ตรวจสอบว่าข้อมูลที่ได้รับเป็นอาร์เรย์
-          if (!Array.isArray(items)) {
-            console.error('Data is not an array');
-            return;
-          }
-          // ค้นหารายการที่มีการบันทึกครั้งล่าสุด
-          const latestItem = items.reduce(
-            (latest: IncomeItem, item: IncomeItem) => {
-              const latestTimestamp = new Date(latest.timestamp || 0);
-              const itemTimestamp = new Date(item.timestamp || 0);
-              return itemTimestamp > latestTimestamp ? item : latest;
-            },
-            items[0]
-          );
-
-          console.log('Latest Item:', latestItem);
-
-
-          // ตรวจสอบและเพิ่มรายการใหม่
-          setIncomeItems((prevItems: IncomeItem[]) => {
-            const existingLabels = prevItems.map(
-              (item: IncomeItem) => item.label
-            );
-
-            // ตรวจสอบว่า latestItem.items เป็นอาร์เรย์
-            const newItems = Array.isArray(latestItem.items)
-              ? latestItem.items.filter(
-                  (item: IncomeItem) => !existingLabels.includes(item.label)
-                )
-              : [];
-
-            // ใช้ console.log เพื่อตรวจสอบข้อมูลที่ถูกดึงมา
-            console.log('Existing Labels:', existingLabels);
-            console.log('New Items:', newItems);
-
-            return [
-              ...prevItems,
-              ...newItems.map((item: IncomeItem) => ({
-                label: item.label,
-                amount: '',
-                comment: '',
-              })),
-            ];
-          });
+          console.log('ค่าที่ได้ จาก income-list ', fetchIncomeItemResponse.items);
+          setIncomeItems(fetchIncomeItemResponse.items);
 
         } catch (error) {
           console.error('Error fetching expense data:', error);
@@ -156,8 +111,13 @@ const IncomesForm = () => {
     setIncomeItems(updatedItems);
   };
 
-  const formatAmount = (amount: string) => {
-    return amount ? amount.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+  const formatAmount = (amount: string | number | undefined) => {
+    if (typeof amount === 'number') {
+      amount = amount.toString();
+    }
+    return amount && typeof amount === 'string' 
+      ? amount.replace(/\B(?=(\d{3})+(?!\d))/g, ',') 
+      : '';
   };
 
   const handleCommentChange = (index: number, value: string) => {
