@@ -198,7 +198,7 @@ const IncomesForm = () => {
     try {
       const formattedDate = date.toISOString().split('T')[0];
       const timestamp = new Date().toISOString();
-      const response = await fetch('/api/save-incomes', {
+      const response = await fetch(`/api/incomes/${userId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

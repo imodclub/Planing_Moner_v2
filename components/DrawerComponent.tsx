@@ -28,8 +28,8 @@ const DrawerComponent: React.FC = () => {
         <ListItem component="a" href="/expenses-form">
           <ListItemText primary="บันทึกรายจ่าย" />
         </ListItem>
-        <ListItem component="a" href="/settings">
-          <ListItemText primary="Settings" />
+        <ListItem component="a" href="/savings-form">
+          <ListItemText primary="บันทึกเงินออม" />
         </ListItem>
       </List>
       <Divider />

@@ -241,7 +241,7 @@ const ExpensesForm = () => {
     <Container component="main" maxWidth="sm">
       <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          บันทึกรายจ่าย ของคุณ  {userName}
+          บันทึกรายจ่าย ของคุณ {userName}
         </Typography>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <DatePicker
@@ -303,6 +303,12 @@ const ExpensesForm = () => {
         </Button>
         <Box sx={{ mt: 4, p: 2, border: '1px solid #e43733', borderRadius: 2 }}>
           <Box sx={{ mt: 2 }}>
+            <Typography variant={'inherit'} sx={{ mt: 2, p: 2 }}>
+              รายการอื่นๆเพิ่มเติม ให้เพิ่มรายการแล้วกดที่
+              &quot;ปุ่มเพิ่มรายการ&quot; ก่อนแล้วจึงกด
+              &quot;บันทึกรายการอีกครั้ง&quot;
+            </Typography>
+
             <TextField
               label="รายการ"
               value={newItem.label}
