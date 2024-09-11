@@ -25,7 +25,6 @@ const MyAppBar: React.FC = () => {
 
   useEffect(() => {
     const sessionId = Cookies.get('sessionID');
-    console.log('Session ID:', sessionId);
 
     if (sessionId) {
       setIsLoggedIn(true);

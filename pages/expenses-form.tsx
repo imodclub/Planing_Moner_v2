@@ -12,7 +12,6 @@ import {
   Container,
 } from '@mui/material';
 import Cookies from 'js-cookie';
-import Grid from '@mui/material/Grid2';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import dayjs, { Dayjs } from 'dayjs';
@@ -193,7 +192,7 @@ const ExpensesForm = () => {
             }}
           />
         </LocalizationProvider>
-        <Grid container spacing={2} sx={{ mt: 2 }}>
+        <Box sx={{ mt: 2 }}>
           {expenseItems.map((item, index) => (
             <Box
               sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}
@@ -229,7 +228,7 @@ const ExpensesForm = () => {
               </Box>
             </Box>
           ))}
-        </Grid>
+        </Box>
         <Button
           variant="contained"
           color="success"
