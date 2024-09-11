@@ -58,6 +58,7 @@ const IncomesForm = () => {
     }
   }, []);
 
+
   // Fetch expense data เมื่อ sessionId ถูกตั้งค่า และ isFetched เป็น false
   useEffect(() => {
     if (sessionId && !isFetched.current) {
@@ -101,18 +102,15 @@ const IncomesForm = () => {
           // ค้นหารายการที่มีการบันทึกครั้งล่าสุด
           const latestItem = items.reduce(
             (latest: IncomeItem, item: IncomeItem) => {
-              const latestTimestamp = latest.timestamp
-                ? new Date(latest.timestamp)
-                : new Date(0);
-              const itemTimestamp = item.timestamp
-                ? new Date(item.timestamp)
-                : new Date(0);
+              const latestTimestamp = new Date(latest.timestamp || 0);
+              const itemTimestamp = new Date(item.timestamp || 0);
               return itemTimestamp > latestTimestamp ? item : latest;
             },
             items[0]
           );
 
-          console.log('Item Label ล่าสุด:', latestItem.label);
+          console.log('Latest Item:', latestItem);
+
 
           // ตรวจสอบและเพิ่มรายการใหม่
           setIncomeItems((prevItems: IncomeItem[]) => {
@@ -126,6 +124,10 @@ const IncomesForm = () => {
                   (item: IncomeItem) => !existingLabels.includes(item.label)
                 )
               : [];
+
+            // ใช้ console.log เพื่อตรวจสอบข้อมูลที่ถูกดึงมา
+            console.log('Existing Labels:', existingLabels);
+            console.log('New Items:', newItems);
 
             return [
               ...prevItems,

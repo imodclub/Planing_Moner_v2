@@ -8,32 +8,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const { userId } = req.query;
   
-
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
-    // ตรวจสอบและแปลง userId เป็น ObjectId หากจำเป็น
+    // ตรวจสอบว่า userId เป็น ObjectId ที่ถูกต้องหรือไม่
     if (!mongoose.Types.ObjectId.isValid(userId as string)) {
       return res.status(400).json({ message: 'Invalid userId format' });
     }
 
-    // ค้นหาข้อมูลโดยใช้ฟิลด์ userId แทน _id
-    const user = await IncomeList.findOne({ userId: userId });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    // ค้นหาข้อมูลโดยใช้ฟิลด์ userId
+    const userIncomeList = await IncomeList.findOne({ userId: userId });
+
+    if (!userIncomeList) {
+      return res.status(404).json({ message: 'Income list not found for this user' });
     }
 
-    // ดึงข้อมูล items ที่มี label
-    const itemsWithLabel = user.items.map((item: any) => ({
+    // ดึงข้อมูล items
+    const itemsWithLabel = userIncomeList.items.map((item: any) => ({
       label: item.label,
-      amount: item.amount || '',
-      comment: item.comment || '',
+      amount: item.amount || '', // ตรวจสอบว่ามีค่าหรือไม่
+      comment: item.comment || '', // ตรวจสอบว่ามีค่าหรือไม่
     }));
 
-    // ส่งข้อมูล items กลับไป
-    return res.status(200).json({ name: user.name, items: itemsWithLabel });
+    // ส่งข้อมูล items กลับไป (ไม่จำเป็นต้องมี name หากไม่ได้เชื่อมโยงโมเดล User)
+    return res.status(200).json({ items: itemsWithLabel });
+
   } catch (error) {
     console.error('Error fetching user items:', error);
     return res.status(500).json({ message: 'Internal server error' });
