@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { verifyAuth } from '@/lib/auth';
+import { useRouter } from 'next/router';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
-
-interface ShortTotalProps {
-  userId: string;
-}
 
 interface FinancialItem {
   date: string;
@@ -16,18 +14,29 @@ interface FinancialItem {
     comment?: string;
   }>;
 }
+interface ShortTotalProps {
+  userId: string;
+}
 
-const ShortTotal: React.FC<ShortTotalProps> = ({ userId }) => {
+const ShortTotal: React.FC<ShortTotalProps> = () => {
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpense, setTotalExpense] = useState(0);
   const [totalSaving, setTotalSaving] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const incomeData = await fetchFinancialData('income', userId);
-        const expenseData = await fetchFinancialData('expense', userId);
-        const savingData = await fetchFinancialData('saving', userId);
+        const user = await verifyAuth();
+        const userId = user.userId;
+
+        const [incomeData, expenseData, savingData] = await Promise.all([
+          fetchFinancialData('income', userId),
+          fetchFinancialData('expense', userId),
+          fetchFinancialData('saving', userId),
+        ]);
 
         const currentYear = new Date().getFullYear();
 
@@ -36,11 +45,17 @@ const ShortTotal: React.FC<ShortTotalProps> = ({ userId }) => {
         setTotalSaving(calculateYearlyTotal(savingData, currentYear));
       } catch (error) {
         console.error('เกิดข้อผิดพลาดในการดึงข้อมูล:', error);
+        setError('ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+        if (error instanceof Error && error.message === 'Unauthorized') {
+          router.push('/login');
+        }
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchData();
-  }, [userId]);
+  }, [router]);
 
   const fetchFinancialData = async (
     type: 'income' | 'expense' | 'saving',
@@ -48,6 +63,9 @@ const ShortTotal: React.FC<ShortTotalProps> = ({ userId }) => {
   ): Promise<FinancialItem[]> => {
     const response = await fetch(`/api/${type}/${userId}`);
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Unauthorized');
+      }
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const data = await response.json();
@@ -88,6 +106,14 @@ const ShortTotal: React.FC<ShortTotalProps> = ({ userId }) => {
       },
     ],
   };
+
+  if (loading) {
+    return <div>กำลังโหลดข้อมูล...</div>;
+  }
+
+  if (error) {
+    return <div>{error}</div>;
+  }
 
   return (
     <div>

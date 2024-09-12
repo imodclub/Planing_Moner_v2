@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
-import Cookies from 'js-cookie';
+import React, { useEffect, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -11,6 +10,8 @@ import {
   Typography,
   Container,
 } from '@mui/material';
+import { verifyAuth } from '@/lib/auth';
+import { useRouter } from 'next/router';
 
 interface IncomeData {
   label: string;
@@ -20,75 +21,47 @@ interface IncomeData {
 
 const TotalIncome: React.FC = () => {
   const [incomeData, setIncomeData] = useState<IncomeData[]>([]);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>('');
-  const isFetched = useRef(false);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const sessionIdFromCookie = Cookies.get('sessionID');
-    if (sessionIdFromCookie) {
-      setSessionId(sessionIdFromCookie);
-      console.log('Fetched sessionID from cookie:', sessionIdFromCookie);
-    } else {
-      console.error('No sessionId found in cookie');
-    }
-  }, []);
+    const fetchData = async () => {
+      try {
+        const user = await verifyAuth();
 
-  useEffect(() => {
-    if (sessionId && !isFetched.current) {
-      const fetchData = async () => {
-        try {
-          // เรียก API เพื่อค้นหา userID จาก sessionID
-          const userIdResponse = await fetch(`/api/session/${sessionId}`);
-          if (!userIdResponse.ok) {
-            console.error('Failed to fetch userID');
-            return;
-          }
-
-          const { userId } = await userIdResponse.json();
-          setUserId(userId);
-
-          // เรียก API เพื่อดึงชื่อผู้ใช้
-          const userNameResponse = await fetch(`/api/users/${userId}`);
-          if (!userNameResponse.ok) {
-            console.error('Failed to fetch userName');
-            return;
-          }
-
-          const { name } = await userNameResponse.json();
-          setUserName(name);
-
-          // เรียก API เพื่อดึงข้อมูลรายได้
-          const incomeResponse = await fetch(
-            `/api/reports/${userId}?report=totalIncome`
-          );
-          if (!incomeResponse.ok) {
-            console.error('Failed to fetch total income data');
-            return;
-          }
-
-          const { data } = await incomeResponse.json();
-          setIncomeData(data);
-        } catch (error) {
-          console.error('Error fetching data:', error);
+        // เรียก API เพื่อดึงข้อมูลรายได้
+        const incomeResponse = await fetch(
+          `/api/reports/${user.userId}?report=totalIncome`
+        );
+        if (!incomeResponse.ok) {
+          throw new Error('Failed to fetch total income data');
         }
-        isFetched.current = true;
-      };
 
-      fetchData();
-    }
-  }, [sessionId]);
+        const { data } = await incomeResponse.json();
+        setIncomeData(data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        router.push('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [router]);
 
   const totalIncome = incomeData.reduce((sum, item) => sum + item.amount, 0);
 
-  // ฟังก์ชันสำหรับจัดรูปแบบตัวเลขให้มีคอมม่าหลักพัน โดยไม่มีทศนิยม
   const formatNumber = (num: number) => {
     return num.toLocaleString('en-US', {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     });
   };
+
+  if (loading) {
+    return <div>กำลังโหลดข้อมูล...</div>;
+  }
 
   return (
     <Container maxWidth={false}>

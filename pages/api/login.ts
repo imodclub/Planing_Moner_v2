@@ -32,12 +32,12 @@ export default async function handler(
 
     if (isMatch) {
       setAuthCookie(res, user._id.toString());
+      console.log('Auth cookie set for user:', user._id);
       return res.status(200).json({ message: 'Logged in successfully' });
     }
 
-    res.status(200).json({ message: 'Logged in successfully' });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 }

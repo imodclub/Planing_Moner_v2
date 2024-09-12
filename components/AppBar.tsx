@@ -24,49 +24,50 @@ const MyAppBar: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   useEffect(() => {
-    const sessionId = Cookies.get('sessionID');
+    const checkLoginStatus = () => {
+      const sessionId = Cookies.get('sessionID');
+      setIsLoggedIn(!!sessionId);
+    };
 
-    if (sessionId) {
-      setIsLoggedIn(true);
-    }
-  }, []);
+    checkLoginStatus();
+    router.events.on('routeChangeComplete', checkLoginStatus);
+
+    return () => {
+      router.events.off('routeChangeComplete', checkLoginStatus);
+    };
+  }, [router]);
 
   const handleToggleDrawer = () => {
-    const sessionId = Cookies.get('sessionID');
-    if (!sessionId) {
-      setDialogOpen(true);
-    } else {
+    if (isLoggedIn) {
       toggleDrawer();
+    } else {
+      setDialogOpen(true);
     }
   };
 
+  
   const handleDialogClose = () => {
     setDialogOpen(false);
   };
 
-  const handleButtonClick = async () => {
-    if (isLoggedIn) {
-      const sessionId = Cookies.get('sessionID');
-      if (sessionId) {
-        await fetch('/api/logout', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ sessionId }),
-        });
-        Cookies.remove('sessionID');
-        setIsLoggedIn(false);
-        router.push('/sign-in');
-      }
-    } else {
-      const sessionId = Cookies.get('sessionID');
-      if (sessionId) {
-        router.push('/dashboard');
-      } else {
-        router.push('/sign-in');
-      }
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      Cookies.remove('sessionID');
+      setIsLoggedIn(false);
+      router.push('/sign-in');
+    } catch (error) {
+      console.error('Logout failed:', error);
     }
+  };
+
+  const handleLogin = () => {
+    router.push('/sign-in');
   };
 
   return (
@@ -82,20 +83,21 @@ const MyAppBar: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            <Link href="/" legacyBehavior>
-              <a style={{ color: 'white', textDecoration: 'none' }}>โปรแกรมรายรับรายจ่าย</a>
+            <Link href="/" >
+              <Typography 
+                sx={{ color: 'white', textDecoration: 'none' }}
+              >
+                โปรแกรมรายรับรายจ่าย
+              </Typography>
             </Link>
           </Typography>
 
-          <Link href="/sign-in" passHref>
-            <Button
-              color="inherit"
-              sx={{ color: 'white' }}
-              onClick={handleButtonClick}
-            >
-              {isLoggedIn ? 'Logout' : 'Login'}
-            </Button>
-          </Link>
+          <Button
+            color="inherit"
+            onClick={isLoggedIn ? handleLogout : handleLogin}
+          >
+            {isLoggedIn ? 'Logout' : 'Login'}
+          </Button>
         </Toolbar>
       </AppBar>
       <Dialog open={dialogOpen} onClose={handleDialogClose}>

@@ -1,6 +1,6 @@
 // components/AnnualFinancialSummaryChart.tsx
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -11,7 +11,8 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import Cookies from 'js-cookie';
+import { verifyAuth } from '@/lib/auth';
+import { useRouter } from 'next/router';
 
 ChartJS.register(
   CategoryScale,
@@ -34,64 +35,34 @@ const AnnualFinancialSummaryChart: React.FC = () => {
     expenses: [],
     savings: [],
   });
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>('');
-  const isFetched = useRef(false);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const sessionIdFromCookie = Cookies.get('sessionID');
-    if (sessionIdFromCookie) {
-      setSessionId(sessionIdFromCookie);
-      console.log('Fetched sessionID from cookie:', sessionIdFromCookie);
-    } else {
-      console.error('No sessionId found in cookie');
-    }
-  }, []);
+    const fetchData = async () => {
+      try {
+        const user = await verifyAuth();
 
-  useEffect(() => {
-    if (sessionId && !isFetched.current) {
-      const fetchData = async () => {
-        try {
-          // เรียก API เพื่อค้นหา userID จาก sessionID
-          const userIdResponse = await fetch(`/api/session/${sessionId}`);
-          if (!userIdResponse.ok) {
-            console.error('Failed to fetch userID');
-            return;
-          }
-
-          const { userId } = await userIdResponse.json();
-          setUserId(userId);
-
-          const userNameResponse = await fetch(`/api/users/${userId}`);
-          if (!userNameResponse.ok) {
-            console.error('Failed to fetch userName');
-            return;
-          }
-
-          const { name } = await userNameResponse.json();
-          setUserName(name);
-
-          // เรียก API เพื่อดึงข้อมูลการเงิน
-          const financialSummaryResponse = await fetch(
-            `/api/financial-summary/${userId}`
-          );
-          if (!financialSummaryResponse.ok) {
-            console.error('Failed to fetch financial summary');
-            return;
-          }
-
-          const data = await financialSummaryResponse.json();
-          setFinancialData(data);
-        } catch (error) {
-          console.error('Error fetching data:', error);
+        // เรียก API เพื่อดึงข้อมูลการเงิน
+        const financialSummaryResponse = await fetch(
+          `/api/financial-summary/${user.userId}`
+        );
+        if (!financialSummaryResponse.ok) {
+          throw new Error('Failed to fetch financial summary');
         }
-        isFetched.current = true;
-      };
 
-      fetchData();
-    }
-  }, [sessionId]);
+        const data = await financialSummaryResponse.json();
+        setFinancialData(data);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        router.push('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [router]);
 
   const options = {
     responsive: true,
@@ -101,7 +72,7 @@ const AnnualFinancialSummaryChart: React.FC = () => {
       },
       title: {
         display: true,
-        text: `รายงานสรุปการเงินประจำปี`,
+        text: 'รายงานสรุปการเงินประจำปี',
       },
     },
   };
@@ -141,6 +112,10 @@ const AnnualFinancialSummaryChart: React.FC = () => {
       },
     ],
   };
+
+  if (loading) {
+    return <div>กำลังโหลดข้อมูล...</div>;
+  }
 
   return (
     <div>

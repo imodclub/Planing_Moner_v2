@@ -33,6 +33,7 @@ export default function Login() {
 
       if (res.ok) {
         setSuccess(true);
+        console.log('Redirecting to dashboard');
         router.push('/dashboard');
       } else {
         const errorData = await res.json();

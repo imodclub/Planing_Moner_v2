@@ -4,10 +4,12 @@ import { Container, Box, Typography } from '@mui/material';
 import AnnualFinancialSummaryChart from '@/components/AnnualFinancialSummaryChart';
 import TotalIncome from '@/components/TotalIncome';
 import TotalExpense from '@/components/TotalExpense';
-import ShortTotal from '@/components/ShortTotal';
 import { withAuth } from '@/components/withAuth';
 
+
+
 function Dashboard() {
+  
   return (
     <Container component="main" maxWidth="sm">
       <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
@@ -20,7 +22,6 @@ function Dashboard() {
           <AnnualFinancialSummaryChart />
         </Box>
         <Box sx={{ mt: 4 }}>
-          <ShortTotal userId="user123" />
         </Box>
         <Box sx={{ mt: 4 }}>
           <TotalIncome />
