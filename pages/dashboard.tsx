@@ -4,8 +4,10 @@ import { Container, Box, Typography } from '@mui/material';
 import AnnualFinancialSummaryChart from '@/components/AnnualFinancialSummaryChart';
 import TotalIncome from '@/components/TotalIncome';
 import TotalExpense from '@/components/TotalExpense';
+import ShortTotal from '@/components/ShortTotal';
+import { withAuth } from '@/components/withAuth';
 
-export default function Dashboard() {
+function Dashboard() {
   return (
     <Container component="main" maxWidth="sm">
       <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
@@ -17,10 +19,13 @@ export default function Dashboard() {
         <Box>
           <AnnualFinancialSummaryChart />
         </Box>
-        <Box sx={{mt:4}}>
+        <Box sx={{ mt: 4 }}>
+          <ShortTotal userId="user123" />
+        </Box>
+        <Box sx={{ mt: 4 }}>
           <TotalIncome />
         </Box>
-        <Box sx={{mt:4}}>
+        <Box sx={{ mt: 4 }}>
           <TotalExpense />
         </Box>
       </Box>
@@ -30,12 +35,12 @@ export default function Dashboard() {
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { req } = context;
-  const sessionId = req.cookies.sessionID;
+  const sessionId = req.cookies.auth_token;
 
   if (!sessionId) {
     return {
       redirect: {
-        destination: '/sign-in',
+        destination: '/login',
         permanent: false,
       },
     };
@@ -45,3 +50,5 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     props: {}, // ส่ง props ไปยังคอมโพเนนต์ Dashboard
   };
 };
+
+export default withAuth(Dashboard);

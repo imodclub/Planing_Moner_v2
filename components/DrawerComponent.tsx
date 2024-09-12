@@ -1,5 +1,6 @@
 // DrawerComponent.tsx
 import React from 'react';
+import Link from 'next/link';
 import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
@@ -45,26 +46,31 @@ const DrawerComponent: React.FC = () => {
       <List>
         {menuItems.map((item) => (
           <ListItem key={item.text} disablePadding>
-            <StyledButton
-              startIcon={item.icon}
-              component="a"
+            <Link
               href={item.href}
+              passHref
+              style={{ textDecoration: 'none', width: '100%' }}
             >
-              {item.text}
-            </StyledButton>
+              <StyledButton startIcon={item.icon}>{item.text}</StyledButton>
+            </Link>
           </ListItem>
         ))}
       </List>
       <Divider />
       <List>
         <ListItem disablePadding>
-          <StyledButton
-            startIcon={<LogoutIcon />}
-            component="a"
+          <Link
             href="/logout"
+            passHref
+            style={{ textDecoration: 'none', width: '100%' }}
           >
-            Logout
-          </StyledButton>
+            <StyledButton
+              startIcon={<LogoutIcon />}
+              href="/logout"
+            >
+              Logout
+            </StyledButton>
+          </Link>
         </ListItem>
       </List>
     </Box>
