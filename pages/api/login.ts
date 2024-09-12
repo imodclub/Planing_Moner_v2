@@ -24,13 +24,16 @@ export default async function handler(
     }
 
     // ตรวจสอบรหัสผ่าน
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password);
 
-    if (!isPasswordValid) {
+    if (!isMatch) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    setAuthCookie(res, user._id.toString());
+    if (isMatch) {
+      setAuthCookie(res, user._id.toString());
+      return res.status(200).json({ message: 'Logged in successfully' });
+    }
 
     res.status(200).json({ message: 'Logged in successfully' });
   } catch (error) {

@@ -22,7 +22,6 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSuccess(false);
     setLoading(true);
 
     try {
@@ -34,14 +33,12 @@ export default function Login() {
 
       if (res.ok) {
         setSuccess(true);
-        setTimeout(() => {
-          router.push('/dashboard');
-        }, 1000);
+        router.push('/dashboard');
       } else {
         const errorData = await res.json();
         setError(errorData.message || 'An error occurred during sign in');
       }
-    } catch (err) {
+    } catch (error) {
       setError('An error occurred. Please try again.');
     } finally {
       setLoading(false);

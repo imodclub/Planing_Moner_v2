@@ -8,6 +8,7 @@ export function withAuth<P extends object>(
   return function AuthComponent(props: P) {
     const router = useRouter();
     const [verified, setVerified] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
       async function checkAuth() {
@@ -17,13 +18,19 @@ export function withAuth<P extends object>(
         } catch (error) {
           console.error('Authentication error:', error);
           router.replace('/login');
+        } finally {
+          setLoading(false);
         }
       }
       checkAuth();
     }, [router]);
 
+    if (loading) {
+      return <div>Loading...</div>; // หรือ component loading ของคุณ
+    }
+
     if (!verified) {
-      return null; // หรือแสดง loading indicator
+      return null;
     }
 
     return <WrappedComponent {...props} />;

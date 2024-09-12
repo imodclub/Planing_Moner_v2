@@ -21,13 +21,13 @@ export function getAuthToken(req?: NextApiRequest) {
 
 export function verifyAuth(req?: NextApiRequest) {
   let token;
-  if (req) {
-    // Server-side
-    token = req.cookies.auth_token;
-  } else {
+  if (typeof window !== 'undefined') {
     // Client-side
     const cookies = parse(document.cookie);
-    token = cookies.auth_token;
+    token = cookies[TOKEN_NAME];
+  } else {
+    // Server-side
+    token = req?.cookies[TOKEN_NAME];
   }
 
   if (!token) throw new Error('Missing auth token');
