@@ -101,7 +101,7 @@ const AnnualFinancialSummaryChart: React.FC = () => {
       },
       title: {
         display: true,
-        text: `รายงานสรุปการเงินประจำปีของ ${userName}`,
+        text: `รายงานสรุปการเงินประจำปี`,
       },
     },
   };
@@ -127,7 +127,7 @@ const AnnualFinancialSummaryChart: React.FC = () => {
       {
         label: 'รายรับ',
         data: financialData.income,
-        backgroundColor: 'rgba(75, 192, 192, 0.5)',
+        backgroundColor: 'rgba(53, 162, 235, 0.5)',
       },
       {
         label: 'รายจ่าย',
@@ -137,14 +137,14 @@ const AnnualFinancialSummaryChart: React.FC = () => {
       {
         label: 'เงินออม',
         data: financialData.savings,
-        backgroundColor: 'rgba(53, 162, 235, 0.5)',
+        backgroundColor: 'rgba(75, 192, 192, 0.5)',
       },
     ],
   };
 
   return (
     <div>
-      <h2>รายงานสรุปการเงินประจำปีของ {userName}</h2>
+      <h3>รายงานสรุปการเงินประจำปี</h3>
       <Bar options={options} data={data} />
     </div>
   );
