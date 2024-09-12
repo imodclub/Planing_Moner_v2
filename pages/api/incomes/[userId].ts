@@ -3,6 +3,14 @@ import dbConnect from '@/models/db';
 import Income from '@/models/incomes.model';
 import mongoose from 'mongoose';
 
+// กำหนด interface สำหรับ item ใน userIncomeList
+interface IncomeItem {
+  label: string;
+  amount?: number | string;
+  comment?: string;
+}
+
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -23,7 +31,7 @@ export default async function handler(
           return res.status(404).json({ message: 'User not found' });
         }
 
-        const itemsWithLabel = user.items.map((item: any) => ({
+        const itemsWithLabel = user.items.map((item: IncomeItem) => ({
           label: item.label,
           amount: item.amount || '',
           comment: item.comment || '',

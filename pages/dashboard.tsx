@@ -3,6 +3,7 @@ import { GetServerSideProps } from 'next';
 import { Container, Box, Typography } from '@mui/material';
 import AnnualFinancialSummaryChart from '@/components/AnnualFinancialSummaryChart';
 import TotalIncome from '@/components/TotalIncome';
+import TotalExpense from '@/components/TotalExpense';
 
 export default function Dashboard() {
   return (
@@ -18,6 +19,9 @@ export default function Dashboard() {
         </Box>
         <Box sx={{mt:4}}>
           <TotalIncome />
+        </Box>
+        <Box sx={{mt:4}}>
+          <TotalExpense />
         </Box>
       </Box>
     </Container>

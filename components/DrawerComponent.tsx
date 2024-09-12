@@ -4,12 +4,36 @@ import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
-import ListItemText from '@mui/material/ListItemText';
 import Divider from '@mui/material/Divider';
 import { useDrawer } from '@/context/DrawerContext';
+import { Button } from '@mui/material';
+import { styled } from '@mui/material/styles';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
+import SavingsIcon from '@mui/icons-material/Savings';
+import LogoutIcon from '@mui/icons-material/Logout';
+
+const StyledButton = styled(Button)(({ theme }) => ({
+  justifyContent: 'flex-start',
+  padding: theme.spacing(1, 2),
+  textTransform: 'none',
+  width: '100%',
+  color: theme.palette.text.primary,
+  '&:hover': {
+    backgroundColor: theme.palette.action.hover,
+  },
+}));
 
 const DrawerComponent: React.FC = () => {
   const { drawerOpen, toggleDrawer } = useDrawer();
+
+  const menuItems = [
+    { text: 'หน้าแรกผู้ใช้', icon: <DashboardIcon />, href: '/dashboard' },
+    { text: 'บันทึกรายรับ', icon: <AddCircleOutlineIcon />, href: '/incomes-form' },
+    { text: 'บันทึกรายจ่าย', icon: <RemoveCircleOutlineIcon />, href: '/expenses-form' },
+    { text: 'บันทึกเงินออม', icon: <SavingsIcon />, href: '/savings-form' },
+  ];
 
   const drawerList = () => (
     <Box
@@ -19,23 +43,28 @@ const DrawerComponent: React.FC = () => {
       onKeyDown={toggleDrawer}
     >
       <List>
-        <ListItem component="a" href="/dashboard">
-          <ListItemText primary="หน้าแรกผู้ใช้" />
-        </ListItem>
-        <ListItem component="a" href="/incomes-form">
-          <ListItemText primary="บันทึกรายรับ" />
-        </ListItem>
-        <ListItem component="a" href="/expenses-form">
-          <ListItemText primary="บันทึกรายจ่าย" />
-        </ListItem>
-        <ListItem component="a" href="/savings-form">
-          <ListItemText primary="บันทึกเงินออม" />
-        </ListItem>
+        {menuItems.map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <StyledButton
+              startIcon={item.icon}
+              component="a"
+              href={item.href}
+            >
+              {item.text}
+            </StyledButton>
+          </ListItem>
+        ))}
       </List>
       <Divider />
       <List>
-        <ListItem component="a" href="/logout">
-          <ListItemText primary="Logout" />
+        <ListItem disablePadding>
+          <StyledButton
+            startIcon={<LogoutIcon />}
+            component="a"
+            href="/logout"
+          >
+            Logout
+          </StyledButton>
         </ListItem>
       </List>
     </Box>
