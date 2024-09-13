@@ -1,4 +1,3 @@
-// pages/login.tsx
 import { useRouter } from 'next/router';
 import React, { useState } from 'react';
 import {
@@ -10,14 +9,15 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,22 +25,11 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (res.ok) {
-        setSuccess(true);
-        console.log('Redirecting to dashboard');
-        router.push('/dashboard');
-      } else {
-        const errorData = await res.json();
-        setError(errorData.message || 'An error occurred during sign in');
-      }
+      await login(email, password);
+      console.log('Redirecting to dashboard');
+      router.push('/dashboard');
     } catch (error) {
-      setError('An error occurred. Please try again.');
+      setError('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -60,7 +49,6 @@ export default function Login() {
           Sign In
         </Typography>
         {error && <Alert severity="error">{error}</Alert>}
-        {success && <Alert severity="success">Sign-in successful!</Alert>}
         <Box component="form" noValidate sx={{ mt: 1 }} onSubmit={handleSubmit}>
           <TextField
             margin="normal"

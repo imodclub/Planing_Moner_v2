@@ -11,7 +11,7 @@ interface AuthContextType {
   isLoggedIn: boolean;
   loading: boolean;
   userId: string | null;
-  login: (userId: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<boolean>;
 }
@@ -30,33 +30,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const checkAuth = async (): Promise<boolean> => {
     setLoading(true);
     try {
-      const token = Cookies.get('auth_token');
-      if (token) {
-        const response = await fetch('/api/verify-auth', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ token }),
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setIsLoggedIn(true);
-          setUserId(data.userId);
-          return true;
-        }
+      const response = await fetch('/api/verify-auth', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setIsLoggedIn(data.isAuthenticated);
+        setUserId(data.user.userId);
+        return data.isAuthenticated;
       }
-      setIsLoggedIn(false);
-      setUserId(null);
-      return false;
     } catch (error) {
       console.error('Auth check failed:', error);
-      setIsLoggedIn(false);
-      setUserId(null);
-      return false;
     } finally {
       setLoading(false);
     }
+    setIsLoggedIn(false);
+    setUserId(null);
+    return false;
   };
 
   useEffect(() => {
