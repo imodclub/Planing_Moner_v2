@@ -5,39 +5,59 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DrawerProvider } from '@/context/DrawerContext';
 import { Kanit } from 'next/font/google';
-import { verifyAuth } from '@/lib/auth';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 
 const kanit = Kanit({
-  weight: ['300', '400', '700'], // เพิ่มน้ำหนักฟอนต์ตามที่ต้องการใช้
-  subsets: ['thai', 'latin'], // เพิ่ม 'latin' เพื่อรองรับตัวอักษรภาษาอังกฤษ
+  weight: ['300', '400', '700'],
+  subsets: ['thai', 'latin'],
   display: 'swap',
-  variable: '--font-kanit', // กำหนดตัวแปร CSS สำหรับใช้ในสไตล์
+  variable: '--font-kanit',
 });
 
 function MyApp({ Component, pageProps }: AppProps) {
-  const router = useRouter();
-   useEffect(() => {
-     if (router.pathname !== '/' && router.pathname !== '/login') {
-       try {
-         verifyAuth();
-       } catch (error) {
-         router.replace('/login');
-       }
-     }
-   }, [router]);
   return (
     <div className={`${kanit.variable} font-sans`}>
-      <DrawerProvider>
-        <Layout>
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <Component {...pageProps} />
-          </LocalizationProvider>
-        </Layout>
-      </DrawerProvider>
+      <AuthProvider>
+        <DrawerProvider>
+          <Layout>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <AuthWrapper>
+                <Component {...pageProps} />
+              </AuthWrapper>
+            </LocalizationProvider>
+          </Layout>
+        </DrawerProvider>
+      </AuthProvider>
     </div>
   );
+}
+
+function AuthWrapper({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const { isLoggedIn, loading, checkAuth } = useAuth();
+
+  useEffect(() => {
+    if (
+      !loading &&
+      !isLoggedIn &&
+      router.pathname !== '/' &&
+      router.pathname !== '/login'
+    ) {
+      router.replace('/login');
+    }
+  }, [isLoggedIn, loading, router]);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  return <>{children}</>;
 }
 
 export default MyApp;

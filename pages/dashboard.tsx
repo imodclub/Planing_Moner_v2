@@ -5,7 +5,7 @@ import AnnualFinancialSummaryChart from '@/components/AnnualFinancialSummaryChar
 import TotalIncome from '@/components/TotalIncome';
 import TotalExpense from '@/components/TotalExpense';
 import { withAuth } from '@/components/withAuth';
-
+import {verifyAuth} from '@/lib/auth'
 
 
 function Dashboard() {
@@ -35,10 +35,10 @@ function Dashboard() {
 }
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
-  const { req } = context;
-  const sessionId = req.cookies.auth_token;
-
-  if (!sessionId) {
+  try {
+    await verifyAuth(context.req);
+    return { props: {} };
+  } catch (error) {
     return {
       redirect: {
         destination: '/login',
@@ -46,10 +46,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       },
     };
   }
-
-  return {
-    props: {}, // ส่ง props ไปยังคอมโพเนนต์ Dashboard
-  };
 };
 
 export default withAuth(Dashboard);

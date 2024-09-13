@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { verify,sign } from 'jsonwebtoken';
 import { parse, serialize } from 'cookie';
+import { IncomingMessage } from 'http';
 
 const TOKEN_NAME = 'auth_token';
 const MAX_AGE = 60 * 60 * 8; // 8 hours
@@ -38,7 +39,7 @@ export function getAuthToken(req?: NextApiRequest) {
   return cookies[TOKEN_NAME];
 }
 
-export async function verifyAuth(req?: NextApiRequest) {
+export async function verifyAuth(req?: NextApiRequest | IncomingMessage) {
   if (typeof window !== 'undefined') {
     // Client-side
     // ส่ง request ไปยัง API endpoint เพื่อตรวจสอบ token
@@ -49,7 +50,10 @@ export async function verifyAuth(req?: NextApiRequest) {
     return await response.json();
   } else {
     // Server-side
-    const token = req?.cookies[TOKEN_NAME];
+    const token =
+      (req as NextApiRequest)?.cookies?.auth_token ??
+      (req as IncomingMessage & { cookies?: { [key: string]: string } })
+        ?.cookies?.auth_token;
     if (!token) {
       throw new Error('Missing auth token');
     }
