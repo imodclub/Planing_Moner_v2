@@ -1,153 +1,322 @@
-// components/AnnualFinancialSummaryChart.tsx
+// components/SavingForm.tsx
 
-import React, { useEffect, useState, useRef } from 'react';
-import { Bar } from 'react-chartjs-2';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from 'chart.js';
-import Cookies from 'js-cookie';
+  Box,
+  TextField,
+  Button,
+  Typography,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Container,
+} from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import AddCircleIcon from '@mui/icons-material/AddCircle';
+import dayjs, { Dayjs } from 'dayjs';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { useAuth } from '@/context/AuthContext';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
-interface FinancialData {
-  income: number[];
-  expenses: number[];
-  savings: number[];
+interface SavingItem {
+  label: string;
+  amount: string;
+  comment: string;
 }
 
-const AnnualFinancialSummaryChart: React.FC = () => {
-  const [financialData, setFinancialData] = useState<FinancialData>({
-    income: [],
-    expenses: [],
-    savings: [],
+const SavingForm: React.FC = () => {
+  const [date, setDate] = useState<Dayjs>(dayjs());
+  const [savingItems, setSavingItems] = useState<SavingItem[]>([
+    { label: 'เงินเดือน', amount: '', comment: '' },
+    { label: 'เงินปันผล, โบนัส', amount: '', comment: '' },
+    { label: 'รายได้เสริม', amount: '', comment: '' },
+  ]);
+  const [newItem, setNewItem] = useState<SavingItem>({
+    label: '',
+    amount: '',
+    comment: '',
   });
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>('');
-  const isFetched = useRef(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user, isLoggedIn } = useAuth();
+  const userId = user?.userId;
+
+  const fetchSavingItems = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/saving-list/${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSavingItems(data.items);
+      } else {
+        throw new Error('Failed to fetch saving items');
+      }
+    } catch (error) {
+      console.error('Error fetching saving items:', error);
+      setError('Failed to load saving items. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
-    const sessionIdFromCookie = Cookies.get('sessionID');
-    if (sessionIdFromCookie) {
-      setSessionId(sessionIdFromCookie);
-      console.log('Fetched sessionID from cookie:', sessionIdFromCookie);
+    if (isLoggedIn && userId) {
+      fetchSavingItems();
     } else {
-      console.error('No sessionId found in cookie');
+      setLoading(false);
     }
-  }, []);
+  }, [fetchSavingItems, isLoggedIn, userId]);
 
-  useEffect(() => {
-    if (sessionId && !isFetched.current) {
-      const fetchData = async () => {
-        try {
-          // เรียก API เพื่อค้นหา userID จาก sessionID
-          const userIdResponse = await fetch(`/api/session/${sessionId}`);
-          if (!userIdResponse.ok) {
-            console.error('Failed to fetch userID');
-            return;
-          }
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
-          const { userId } = await userIdResponse.json();
-          setUserId(userId);
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
-          const userNameResponse = await fetch(`/api/users/${userId}`);
-          if (!userNameResponse.ok) {
-            console.error('Failed to fetch userName');
-            return;
-          }
+  if (!isLoggedIn || !userId) {
+    return <div>Please log in to access this form.</div>;
+  }
 
-          const { name } = await userNameResponse.json();
-          setUserName(name);
+  const handleAmountChange = (index: number, value: string) => {
+    const updatedItems = [...savingItems];
+    updatedItems[index].amount = value.replace(/,/g, '');
+    setSavingItems(updatedItems);
+  };
 
-          // เรียก API เพื่อดึงข้อมูลการเงิน
-          const financialSummaryResponse = await fetch(
-            '/api/financial-summary'
-          );
-          if (!financialSummaryResponse.ok) {
-            console.error('Failed to fetch financial summary');
-            return;
-          }
+  const formatAmount = (amount: string | number | undefined) => {
+    if (typeof amount === 'number') {
+      amount = amount.toString();
+    }
+    return amount && typeof amount === 'string'
+      ? amount.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+      : '';
+  };
 
-          const data = await financialSummaryResponse.json();
-          setFinancialData(data);
-        } catch (error) {
-          console.error('Error fetching data:', error);
+  const handleCommentChange = (index: number, value: string) => {
+    const updatedItems = [...savingItems];
+    updatedItems[index].comment = value;
+    setSavingItems(updatedItems);
+  };
+
+  const handleAddItem = async () => {
+    if (newItem.label && newItem.amount && userId) {
+      setSavingItems([...savingItems, newItem]);
+      try {
+        const response = await fetch('/api/saving-list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,
+            items: [...savingItems, newItem],
+          }),
+        });
+        if (response.ok) {
+          console.log('saving list saved successfully');
+        } else {
+          console.error('Failed to save saving list');
         }
-        isFetched.current = true;
-      };
-
-      fetchData();
+      } catch (error) {
+        console.error('Error:', error);
+      }
+      setNewItem({ label: '', amount: '', comment: '' });
     }
-  }, [sessionId]);
-
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-      },
-      title: {
-        display: true,
-        text: `รายงานสรุปการเงินประจำปีของ ${userName}`,
-      },
-    },
   };
 
-  const labels = [
-    'มกราคม',
-    'กุมภาพันธ์',
-    'มีนาคม',
-    'เมษายน',
-    'พฤษภาคม',
-    'มิถุนายน',
-    'กรกฎาคม',
-    'สิงหาคม',
-    'กันยายน',
-    'ตุลาคม',
-    'พฤศจิกายน',
-    'ธันวาคม',
-  ];
-
-  const data = {
-    labels,
-    datasets: [
-      {
-        label: 'รายรับ',
-        data: financialData.income,
-        backgroundColor: 'rgba(75, 192, 192, 0.5)',
-      },
-      {
-        label: 'รายจ่าย',
-        data: financialData.expenses,
-        backgroundColor: 'rgba(255, 99, 132, 0.5)',
-      },
-      {
-        label: 'เงินออม',
-        data: financialData.savings,
-        backgroundColor: 'rgba(53, 162, 235, 0.5)',
-      },
-    ],
+  const handleDeleteItem = async (index: number) => {
+    if (!userId) return;
+    try {
+      const updatedItems = savingItems.filter((_, i) => i !== index);
+      setSavingItems(updatedItems);
+      const response = await fetch(`/api/saving-list/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ index }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete item');
+      }
+      console.log('Item deleted successfully');
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      setSavingItems([...savingItems]);
+    }
   };
+
+  const handleSave = async () => {
+    console.log('handleSave - Initial userId:', userId);
+    if (!userId) {
+      setDialogOpen(true);
+      return;
+    }
+    try {
+      const formattedDate = date.format('YYYY-MM-DD');
+      console.log('handleSave - Sending request with userId:', userId);
+      const response = await fetch(`/api/saving/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: formattedDate,
+          items: savingItems,
+          userId: userId,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+      if (response.ok) {
+        console.log('handleSave - Request successful for userId:', userId);
+        setSuccessDialogOpen(true);
+        setSavingItems([
+          { label: 'เงินเดือน', amount: '', comment: '' },
+          { label: 'โบนัส', amount: '', comment: '' },
+          { label: 'รายได้เสริม', amount: '', comment: '' },
+        ]);
+      } else {
+        console.log('handleSave - Request failed for userId:', userId);
+      }
+    } catch (error) {
+      console.error('Error saving savings:', error);
+      setDialogOpen(true);
+    }
+  };
+
+  const handleCloseDialog = () => setDialogOpen(false);
+  const handleCloseSuccessDialog = () => setSuccessDialogOpen(false);
+
+  if (!isLoggedIn) {
+    return <Typography>กรุณาเข้าสู่ระบบเพื่อบันทึกรายรับ</Typography>;
+  }
 
   return (
-    <div>
-      <h2>รายงานสรุปการเงินประจำปีของ {userName}</h2>
-      <Bar options={options} data={data} />
-    </div>
+    <Container component="main" maxWidth="sm">
+      <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          บันทึกเงินออมของคุณ
+        </Typography>
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <DatePicker
+            label="วันที่บันทึก"
+            value={date}
+            onChange={(newValue: Dayjs | null) => {
+              if (newValue) setDate(newValue);
+            }}
+            slots={{
+              textField: (params) => <TextField {...params} fullWidth />,
+            }}
+          />
+        </LocalizationProvider>
+        <Box sx={{ mt: 2 }}>
+          {savingItems.map((item, index) => (
+            <Box key={index} display="flex" alignItems="center" my={2}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant={'inherit'}>{item.label}</Typography>
+                  <TextField
+                    label="จำนวนเงิน"
+                    value={formatAmount(item.amount)}
+                    onChange={(e) => handleAmountChange(index, e.target.value)}
+                    fullWidth
+                    sx={{ mr: 2, mt: 2 }}
+                  />
+                  <TextField
+                    label="หมายเหตุ"
+                    value={item.comment}
+                    onChange={(e) => handleCommentChange(index, e.target.value)}
+                    fullWidth
+                    sx={{ mr: 2, mt: 2 }}
+                  />
+                  <IconButton
+                    onClick={() => handleDeleteItem(index)}
+                    color="error"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </Box>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+        <Button
+          variant="contained"
+          color="success"
+          onClick={handleSave}
+          fullWidth
+          sx={{ mt: 2 }}
+        >
+          บันทึกรายการ
+        </Button>
+        <Box sx={{ mt: 4, p: 2, border: '1px solid #e43733', borderRadius: 2 }}>
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" mt={2}>
+              รายการอื่นๆเพิ่มเติม ให้เพิ่มรายการแล้วกดที่
+              &ldquo;ปุ่มเพิ่มรายการ&ldquo; ก่อนแล้วจึงกด
+              &ldquo;บันทึกรายการอีกครั้ง&ldquo;
+            </Typography>
+            <TextField
+              label="รายการ"
+              value={newItem.label}
+              onChange={(e) =>
+                setNewItem({ ...newItem, label: e.target.value })
+              }
+              fullWidth
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              label="จำนวนเงิน"
+              value={newItem.amount}
+              onChange={(e) =>
+                setNewItem({ ...newItem, amount: e.target.value })
+              }
+              fullWidth
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              label="หมายเหตุ"
+              value={newItem.comment}
+              onChange={(e) =>
+                setNewItem({ ...newItem, comment: e.target.value })
+              }
+              fullWidth
+              sx={{ mb: 2 }}
+            />
+          </Box>
+          <Button
+            variant="contained"
+            color="secondary"
+            startIcon={<AddCircleIcon />}
+            onClick={handleAddItem}
+            fullWidth
+          >
+            เพิ่มรายการ
+          </Button>
+        </Box>
+      </Box>
+      <Dialog open={dialogOpen} onClose={handleCloseDialog}>
+        <DialogTitle>ข้อผิดพลาด</DialogTitle>
+        <DialogContent>
+          <Typography>ไม่พบ userId กรุณาลงชื่อเข้าใช้ใหม่</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>ตกลง</Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog open={successDialogOpen} onClose={handleCloseSuccessDialog}>
+        <DialogTitle>บันทึกสำเร็จ</DialogTitle>
+        <DialogContent>
+          <Typography>บันทึกข้อมูลรายได้สำเร็จ!</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseSuccessDialog}>ตกลง</Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 };
 
-export default AnnualFinancialSummaryChart;
+export default SavingForm;

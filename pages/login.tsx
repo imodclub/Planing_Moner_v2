@@ -1,5 +1,7 @@
+// ชื่อไฟล์: login.tsx
+
 import { useRouter } from 'next/router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   TextField,
@@ -17,7 +19,13 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, isLoggedIn } = useAuth();
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      router.replace('/dashboard');
+    }
+  }, [isLoggedIn, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,13 +33,15 @@ export default function Login() {
     setLoading(true);
 
     try {
+      console.log('Login attempt started with email:', email);
       await login(email, password);
-      console.log('Redirecting to dashboard');
-      router.push('/dashboard');
+      console.log('Login successful');
     } catch (error) {
+      console.error('Login error:', error);
       setError('Invalid email or password. Please try again.');
     } finally {
       setLoading(false);
+      console.log('Login process completed');
     }
   };
 
@@ -60,7 +70,9 @@ export default function Login() {
             autoComplete="email"
             autoFocus
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+            }}
           />
           <TextField
             margin="normal"
@@ -72,7 +84,9 @@ export default function Login() {
             id="password"
             autoComplete="current-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+            }}
           />
           <Button
             type="submit"

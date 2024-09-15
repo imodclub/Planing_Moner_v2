@@ -1,116 +1,43 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Typography,
-  Container,
-} from '@mui/material';
-import { verifyAuth } from '@/lib/auth';
-import { useRouter } from 'next/router';
-
-interface ExpenseData {
-  label: string;
-  amount: number;
-  comment: string;
-}
+import React, { useState, useEffect } from 'react';
+import { Box, Typography } from '@mui/material';
+import { useAuth } from '@/context/AuthContext'; // เพิ่มการ import useAuth hook
 
 const TotalExpense: React.FC = () => {
-  const [expenseData, setExpenseData] = useState<ExpenseData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [totalExpense, setTotalExpense] = useState<number>(0);
+  const { userId } = useAuth(); // เพิ่มการใช้ useAuth hook เพื่อรับ userId
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchTotalExpense = async () => {
+      if (!userId) return; // ตรวจสอบว่ามี userId หรือไม่ก่อนเรียก API
+
       try {
-        const user = await verifyAuth();
-
-        const expenseResponse = await fetch(
-          `/api/reports/${user.userId}?report=totalExpense`
-        );
-        if (!expenseResponse.ok) {
-          throw new Error('Failed to fetch total expense data');
+        // เพิ่ม userId ในการเรียก API
+        const response = await fetch(`/api/total-expense?userId=${userId}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch total expense');
         }
-
-        const { data } = await expenseResponse.json();
-        setExpenseData(data);
+        const data = await response.json();
+        setTotalExpense(data.totalExpense);
       } catch (error) {
-        console.error('Error fetching data:', error);
-        router.push('/login');
-      } finally {
-        setLoading(false);
+        console.error('Error fetching total expense:', error);
       }
     };
 
-    fetchData();
-  }, [router]);
-
-  const totalExpense = expenseData.reduce((sum, item) => sum + item.amount, 0);
-
-  const formatNumber = (num: number) => {
-    return num.toLocaleString('en-US', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    });
-  };
-
-  if (loading) {
-    return <div>กำลังโหลดข้อมูล...</div>;
-  }
+    fetchTotalExpense();
+  }, [userId]); // เพิ่ม userId เป็น dependency ของ useEffect
 
   return (
-    <Container maxWidth={false}>
-      <Typography variant="h6" gutterBottom>
-        ค่าใช้จ่ายทั้งหมด
+    <Box>
+      <Typography variant="h6" component="h2" gutterBottom>
+        รายจ่ายทั้งหมด
       </Typography>
-      <TableContainer component={Paper}>
-        <Table sx={{ minWidth: '100%' }} aria-label="total expense table">
-          <TableHead>
-            <TableRow>
-              <TableCell>รายการ</TableCell>
-              <TableCell align="right">จำนวนเงิน</TableCell>
-              <TableCell>รายละเอียด</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {expenseData.map((item, index) => (
-              <TableRow
-                key={index}
-                sx={{
-                  '&:nth-of-type(odd)': { backgroundColor: 'action.hover' },
-                }}
-              >
-                <TableCell component="th" scope="row">
-                  {item.label}
-                </TableCell>
-                <TableCell align="right">
-                  {formatNumber(Math.round(item.amount))}
-                </TableCell>
-                <TableCell>{item.comment}</TableCell>
-              </TableRow>
-            ))}
-            <TableRow
-              sx={{
-                backgroundColor: 'primary.light',
-                fontWeight: 'bold',
-              }}
-            >
-              <TableCell component="th" scope="row">
-                รวมค่าใช้จ่ายทั้งหมด
-              </TableCell>
-              <TableCell align="right">
-                {formatNumber(Math.round(totalExpense))}
-              </TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Container>
+      <Typography variant="h4" component="p">
+        {totalExpense.toLocaleString('th-TH', {
+          style: 'currency',
+          currency: 'THB',
+        })}
+      </Typography>
+    </Box>
   );
 };
 

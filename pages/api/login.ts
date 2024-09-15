@@ -1,43 +1,53 @@
-// pages/api/login.ts
+// ชื่อไฟล์: pages/api/login.ts
+
 import type { NextApiRequest, NextApiResponse } from 'next';
-import dbConnect from '@/models/db';
-import User from '@/models/user.model';
-import { setAuthCookie } from '@/lib/auth';
-import bcrypt from 'bcrypt';
+import { sign } from 'jsonwebtoken';
+import { compare } from 'bcrypt';
+import dbConnect from '@/models/db'; // สมมติว่าคุณมีฟังก์ชันนี้สำหรับเชื่อมต่อกับฐานข้อมูล
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
   if (req.method !== 'POST') {
-    return res.status(405).end();
+    return res.status(405).json({ message: 'Method not allowed' });
   }
-
-  await dbConnect();
 
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email });
-    if (!user || !user.password) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+    const db = await dbConnect();
+    const collection = db.collection('users');
+
+    const user = await collection.findOne({ email });
+
+    if (!user) {
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // ตรวจสอบรหัสผ่าน
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await compare(password, user.password);
 
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    if (isMatch) {
-      setAuthCookie(res, user._id.toString());
-      console.log('Auth cookie set for user:', user._id);
-      return res.status(200).json({ message: 'Logged in successfully' });
-    }
+    const token = sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d' }
+    );
 
+    res.status(200).json({
+      message: 'Logged in successfully',
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name, // เพิ่มข้อมูลผู้ใช้อื่นๆ ตามที่คุณต้องการ
+      },
+      token,
+    });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error' });
   }
 }

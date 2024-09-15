@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   TextField,
@@ -11,12 +11,13 @@ import {
   DialogActions,
   Container,
 } from '@mui/material';
-import Cookies from 'js-cookie';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import dayjs, { Dayjs } from 'dayjs';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { useAuth } from '@/context/AuthContext';
+
 
 interface ExpenseItem {
   label: string;
@@ -24,7 +25,7 @@ interface ExpenseItem {
   comment: string;
 }
 
-const ExpensesForm = () => {
+const ExpensesForm:React.FC = () => {
   const [date, setDate] = useState<Dayjs>(dayjs());
   const [expenseItems, setExpenseItems] = useState<ExpenseItem[]>([
     { label: 'ค่าผ่อนบ้าน', amount: '', comment: '' },
@@ -47,63 +48,49 @@ const ExpensesForm = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
-  const [sessionId, setSessionId] = useState('');
-  const [userId, setUserId] = useState('');
-  const [userName, setUserName] = useState('');
-  const isFetched = useRef(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user, isLoggedIn } = useAuth();
+  const userId = user?.userId;
 
-  // ดึง sessionID จากคุกกี้เมื่อโหลดหน้า
-  useEffect(() => {
-    const sessionIdFromCookie = Cookies.get('sessionID');
-    if (sessionIdFromCookie) {
-      setSessionId(sessionIdFromCookie);
-      console.log('Fetched sessionID from cookie:', sessionIdFromCookie);
+ 
+  const fetchExpenseItems = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/expense-list/${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setExpenseItems(data.items);
+      } else {
+        throw new Error('Failed to fetch income items');
+      }
+    } catch (error) {
+      console.error('Error fetching Expense items:', error);
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
-  // Fetch expense data เมื่อ sessionId ถูกตั้งค่า และ isFetched เป็น false
   useEffect(() => {
-    if (sessionId && !isFetched.current) {
-      const fetchUserId = async () => {
-        try {
-          // เรียก API เพื่อค้นหา userID จาก sessionID
-          const userIdResponse = await fetch(`/api/session/${sessionId}`);
-          if (!userIdResponse.ok) {
-            console.error('Failed to fetch userID');
-            return;
-          }
-
-          const { userId } = await userIdResponse.json();
-          setUserId(userId);
-
-          const userNameResponse = await fetch(`/api/users/${userId}`);
-          if (!userNameResponse) {
-            console.error('Failed to fetch userName');
-            return;
-          }
-
-          const { name } = await userNameResponse.json();
-          setUserName(name);
-
-          const fetchExpenseItem = await fetch(`/api/expense-list/${userId}`);
-
-          if (!fetchExpenseItem.ok) {
-            console.error('Failed to fetch user on expense');
-            return;
-          }
-
-          const fetchExpenseItemResponse = await fetchExpenseItem.json();
-          setExpenseItems(fetchExpenseItemResponse.items);
-       
-        } catch (error) {
-          console.error('Error fetching expense data:', error);
-        }
-        isFetched.current = true;
-      };
-
-      fetchUserId();
+    if (isLoggedIn && userId) {
+      fetchExpenseItems();
     }
-  }, [sessionId, isFetched]); // Added isFetched to the dependency array
+  }, [fetchExpenseItems, isLoggedIn, userId]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  if (!isLoggedIn || !userId) {
+    return <div>Please log in to access this form.</div>;
+  }
+
 
   const handleAmountChange = (index: number, value: string) => {
     const updatedItems = [...expenseItems];
@@ -122,65 +109,45 @@ const ExpensesForm = () => {
   };
 
   const handleAddItem = async () => {
-    if (newItem.label && newItem.amount) {
-      // อัปเดตรายการใน local state
+    if (newItem.label && newItem.amount && userId) {
       setExpenseItems([...expenseItems, newItem]);
-
-      // สร้างข้อมูลใหม่เพื่อส่งไปยัง API
-      const payload = {
-        userId: userId, // คุณต้องใช้ userId ที่แท้จริงตรงนี้
-        items: [...expenseItems, newItem], // รายการทั้งหมดที่จะบันทึก
-      };
-
       try {
-        // เรียก API เพื่อบันทึกข้อมูลไปยังฐานข้อมูล
         const response = await fetch('/api/expense-list', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,
+            items: [...expenseItems, newItem],
+          }),
         });
-
         if (response.ok) {
-          const result = await response.json();
-          console.log(result.message); // แสดงผลลัพธ์ใน console
+          console.log('Expense list saved successfully');
         } else {
-          console.error('Failed to save expense list');
+          console.error('Failed to save Expense list');
         }
       } catch (error) {
         console.error('Error:', error);
       }
-
-      // รีเซ็ตข้อมูล newItem
       setNewItem({ label: '', amount: '', comment: '' });
     }
   };
 
   const handleDeleteItem = async (index: number) => {
+    if (!userId) return;
     try {
-      // ลบ item จาก state ก่อน
       const updatedItems = expenseItems.filter((_, i) => i !== index);
       setExpenseItems(updatedItems);
-  
-      // ส่งคำขอ DELETE ไปยัง API เพื่อลบ item จากฐานข้อมูล
       const response = await fetch(`/api/expense-list/${userId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ index }),
       });
-  
       if (!response.ok) {
         throw new Error('Failed to delete item');
       }
-  
-      // หากลบสำเร็จ อาจต้องการทำอะไรเพิ่มเติม เช่น แสดงข้อความแจ้งเตือน
       console.log('Item deleted successfully');
     } catch (error) {
       console.error('Error deleting item:', error);
-      // กรณีเกิดข้อผิดพลาด อาจต้องการกู้คืนสถานะเดิม
       setExpenseItems([...expenseItems]);
     }
   };
@@ -193,18 +160,15 @@ const ExpensesForm = () => {
     }
 
     try {
-      const formattedDate = date.toISOString().split('T')[0];
-      const timestamp = new Date().toISOString();
+      const formattedDate = date.format('YYYY-MM-DD');
       const response = await fetch(`/api/expense/${userId}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date: formattedDate,
-          expenseItems,
-          userId, // ใช้ userId ที่เก็บไว้ใน state
-          timestamp,
+          items: expenseItems,
+          userId: userId,
+          timestamp: new Date().toISOString(),
         }),
       });
 
@@ -241,7 +205,7 @@ const ExpensesForm = () => {
     <Container component="main" maxWidth="sm">
       <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          บันทึกรายจ่าย ของคุณ {userName}
+          บันทึกรายจ่ายของคุณ 
         </Typography>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <DatePicker

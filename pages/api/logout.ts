@@ -1,44 +1,30 @@
 // pages/api/logout.ts
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import dbConnect from '@/models/db';
-import Session from '@/models/session.model';
 import { serialize } from 'cookie';
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'วิธีการไม่ได้รับอนุญาต' });
   }
 
-  await dbConnect(); // เชื่อมต่อกับฐานข้อมูล
-
-  const { sessionId } = req.cookies;
-
-  if (!sessionId) {
-    return res.status(400).json({ message: 'ไม่พบ sessionId' });
-  }
-
   try {
-    // ค้นหา session ในฐานข้อมูล
-    const session = await Session.findOne({ sessionId });
+    // ลบ cookie ทั้งหมดที่เกี่ยวข้อง
+    const cookies = req.cookies;
+    const clearedCookies = Object.keys(cookies).map((cookieName) =>
+      serialize(cookieName, '', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV !== 'development',
+        sameSite: 'strict',
+        path: '/',
+        expires: new Date(0),
+      })
+    );
 
-    if (!session) {
-      return res.status(404).json({ message: 'ไม่พบ Session' });
-    }
-
-    // ลบ session จากฐานข้อมูล
-    await Session.deleteOne({ sessionId });
-
-    // ลบ cookie
-    const cookie = serialize('sessionId', '', {
-      httpOnly: true,
-      secure: process.env.NODE_ENV !== 'development',
-      sameSite: 'strict',
-      path: '/',
-      expires: new Date(0),
-    });
-
-    res.setHeader('Set-Cookie', cookie);
+    res.setHeader('Set-Cookie', clearedCookies);
 
     return res.status(200).json({ message: 'ออกจากระบบสำเร็จ' });
   } catch (error) {

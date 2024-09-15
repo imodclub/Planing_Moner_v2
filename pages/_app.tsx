@@ -6,7 +6,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DrawerProvider } from '@/context/DrawerContext';
 import { Kanit } from 'next/font/google';
 import { useRouter } from 'next/router';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 
 const kanit = Kanit({
@@ -38,7 +38,7 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isLoggedIn, loading, checkAuth } = useAuth();
 
-  useEffect(() => {
+  const redirectToLogin = useCallback(() => {
     if (
       !loading &&
       !isLoggedIn &&
@@ -50,8 +50,13 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
   }, [isLoggedIn, loading, router]);
 
   useEffect(() => {
+    redirectToLogin();
+  }, [redirectToLogin]);
+
+  useEffect(() => {
     checkAuth();
-  }, [checkAuth]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ทำงานเพียงครั้งเดียวเมื่อคอมโพเนนต์ถูกโหลด
 
   if (loading) {
     return <div>Loading...</div>;
@@ -59,5 +64,6 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
+
 
 export default MyApp;

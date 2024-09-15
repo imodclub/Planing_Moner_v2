@@ -1,5 +1,6 @@
-//ไฟล์ก่อนทำการเปลี่ยนแปลงการ Fetch Item
-import React, { useState, useEffect, useRef } from 'react';
+// components/IncomesForm.tsx
+
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   TextField,
@@ -12,96 +13,79 @@ import {
   DialogActions,
   Container,
 } from '@mui/material';
-import Cookies from 'js-cookie';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import dayjs, { Dayjs } from 'dayjs';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
+import { useAuth } from '@/context/AuthContext';
 
 interface IncomeItem {
   label: string;
   amount: string;
   comment: string;
-  timestamp?: string;
 }
 
-const IncomesForm = () => {
+
+const IncomesForm: React.FC = () => {
   const [date, setDate] = useState<Dayjs>(dayjs());
   const [incomeItems, setIncomeItems] = useState<IncomeItem[]>([
     { label: 'เงินเดือน', amount: '', comment: '' },
     { label: 'เงินปันผล, โบนัส', amount: '', comment: '' },
     { label: 'รายได้เสริม', amount: '', comment: '' },
   ]);
-
   const [newItem, setNewItem] = useState<IncomeItem>({
     label: '',
     amount: '',
     comment: '',
   });
-
   const [dialogOpen, setDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
-  const [sessionId, setSessionId] = useState('');
-  const [userId, setUserId] = useState('');
-  const [userName, setUserName] = useState('');
-  const isFetched = useRef(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user, isLoggedIn } = useAuth();
+  const userId = user?.userId;
 
-  // ดึง sessionID จากคุกกี้เมื่อโหลดหน้า
+
+  const fetchIncomeItems = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/income-list/${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setIncomeItems(data.items);
+      } else {
+        throw new Error('Failed to fetch income items');
+      }
+    } catch (error) {
+      console.error('Error fetching income items:', error);
+      setError('Failed to load income items. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
   useEffect(() => {
-    const sessionIdFromCookie = Cookies.get('sessionID');
-    if (sessionIdFromCookie) {
-      setSessionId(sessionIdFromCookie);
+    if (isLoggedIn && userId) {
+      fetchIncomeItems();
     } else {
-      console.error('No sessionId found in cookie');
+      setLoading(false);
     }
-  }, []);
+  }, [fetchIncomeItems, isLoggedIn, userId]);
 
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
-  // Fetch expense data เมื่อ sessionId ถูกตั้งค่า และ isFetched เป็น false
-  useEffect(() => {
-    if (sessionId && !isFetched.current) {
-      const fetchUserId = async () => {
-        try {
-          // เรียก API เพื่อค้นหา userID จาก sessionID
-          const userIdResponse = await fetch(`/api/session/${sessionId}`);
-          if (!userIdResponse.ok) {
-            console.error('Failed to fetch userID');
-            return;
-          }
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
-          const { userId } = await userIdResponse.json();
-          setUserId(userId);
-
-          const userNameResponse = await fetch(`/api/users/${userId}`);
-          if (!userNameResponse) {
-            console.error('Failed to fetch userName');
-            return;
-          }
-
-          const { name } = await userNameResponse.json();
-          setUserName(name);
-
-          const fetchIncomeItem = await fetch(`/api/income-list/${userId}`);
-
-          if (!fetchIncomeItem.ok) {
-            console.error('Failed to fetch user on incomes');
-            return;
-          }
-
-          const fetchIncomeItemResponse = await fetchIncomeItem.json();
-          setIncomeItems(fetchIncomeItemResponse.items);
-
-        } catch (error) {
-          console.error('Error fetching expense data:', error);
-        }
-        isFetched.current = true;
-      };
-
-      fetchUserId();
-    }
-  }, [sessionId, isFetched]); // Added isFetched to the dependency array
-
+  if (!isLoggedIn || !userId) {
+    return <div>Please log in to access this form.</div>;
+  }
 
   const handleAmountChange = (index: number, value: string) => {
     const updatedItems = [...incomeItems];
@@ -125,99 +109,78 @@ const IncomesForm = () => {
   };
 
   const handleAddItem = async () => {
-    if (newItem.label && newItem.amount) {
-      // อัปเดตรายการใน local state
+    if (newItem.label && newItem.amount && userId) {
       setIncomeItems([...incomeItems, newItem]);
-
-      // สร้างข้อมูลใหม่เพื่อส่งไปยัง API
-      const payload = {
-        userId: userId, // คุณต้องใช้ userId ที่แท้จริงตรงนี้
-        items: [...incomeItems, newItem], // รายการทั้งหมดที่จะบันทึก
-      };
-
       try {
-        // เรียก API เพื่อบันทึกข้อมูลไปยังฐานข้อมูล
         const response = await fetch('/api/income-list', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,
+            items: [...incomeItems, newItem],
+          }),
         });
-
         if (response.ok) {
-          const result = await response.json();
-          console.log(result.message); // แสดงผลลัพธ์ใน console
+          console.log('Income list saved successfully');
         } else {
           console.error('Failed to save income list');
         }
       } catch (error) {
         console.error('Error:', error);
       }
-
-      // รีเซ็ตข้อมูล newItem
       setNewItem({ label: '', amount: '', comment: '' });
     }
   };
 
-
   const handleDeleteItem = async (index: number) => {
+    if (!userId) return;
     try {
-      // ลบ item จาก state ก่อน
       const updatedItems = incomeItems.filter((_, i) => i !== index);
       setIncomeItems(updatedItems);
-  
-      // ส่งคำขอ DELETE ไปยัง API เพื่อลบ item จากฐานข้อมูล
       const response = await fetch(`/api/income-list/${userId}`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ index }),
       });
-  
       if (!response.ok) {
         throw new Error('Failed to delete item');
       }
-  
-      // หากลบสำเร็จ อาจต้องการทำอะไรเพิ่มเติม เช่น แสดงข้อความแจ้งเตือน
       console.log('Item deleted successfully');
     } catch (error) {
       console.error('Error deleting item:', error);
-      // กรณีเกิดข้อผิดพลาด อาจต้องการกู้คืนสถานะเดิม
       setIncomeItems([...incomeItems]);
     }
   };
 
   const handleSave = async () => {
+    console.log('handleSave - Initial userId:', userId);
     if (!userId) {
       setDialogOpen(true);
       return;
     }
-
     try {
-      const formattedDate = date.toISOString().split('T')[0];
-      const timestamp = new Date().toISOString();
+      const formattedDate = date.format('YYYY-MM-DD');
+      console.log('handleSave - Sending request with userId:', userId);
       const response = await fetch(`/api/incomes/${userId}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date: formattedDate,
           items: incomeItems,
-          userId, // ใช้ userId ที่เก็บไว้ใน state
-          timestamp,
+          userId: userId,
+          timestamp: new Date().toISOString(),
         }),
       });
-
       if (response.ok) {
+        console.log('handleSave - Request successful for userId:', userId);
         setSuccessDialogOpen(true);
         setIncomeItems([
           { label: 'เงินเดือน', amount: '', comment: '' },
           { label: 'โบนัส', amount: '', comment: '' },
           { label: 'รายได้เสริม', amount: '', comment: '' },
         ]);
+      } else {
+        console.log('handleSave - Request failed for userId:', userId);
       }
     } catch (error) {
       console.error('Error saving incomes:', error);
@@ -225,19 +188,18 @@ const IncomesForm = () => {
     }
   };
 
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-  };
+  const handleCloseDialog = () => setDialogOpen(false);
+  const handleCloseSuccessDialog = () => setSuccessDialogOpen(false);
 
-  const handleCloseSuccessDialog = () => {
-    setSuccessDialogOpen(false);
-  };
+  if (!isLoggedIn) {
+    return <Typography>กรุณาเข้าสู่ระบบเพื่อบันทึกรายรับ</Typography>;
+  }
 
   return (
     <Container component="main" maxWidth="sm">
       <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
         <Typography variant="h4" component="h1" gutterBottom>
-          บันทึกรายรับ ของคุณ  {userName}
+          บันทึกรายรับของคุณ
         </Typography>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <DatePicker
@@ -246,19 +208,18 @@ const IncomesForm = () => {
             onChange={(newValue: Dayjs | null) => {
               if (newValue) setDate(newValue);
             }}
-            slots={{ textField: (params) => <TextField {...params} fullWidth /> }}
+            slots={{
+              textField: (params) => <TextField {...params} fullWidth />,
+            }}
           />
         </LocalizationProvider>
         <Box sx={{ mt: 2 }}>
           {incomeItems.map((item, index) => (
-            <Box
-              sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}
-              key={index}
-            >
+            <Box key={index} display="flex" alignItems="center" my={2}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <Box sx={{ mt: 2 }}>
-                <Typography variant={'inherit'}>{item.label}</Typography>
-                <TextField
+                  <Typography variant={'inherit'}>{item.label}</Typography>
+                  <TextField
                     label="จำนวนเงิน"
                     value={formatAmount(item.amount)}
                     onChange={(e) => handleAmountChange(index, e.target.value)}
@@ -266,7 +227,7 @@ const IncomesForm = () => {
                     sx={{ mr: 2, mt: 2 }}
                   />
                   <TextField
-                    label="รายละเอียด"
+                    label="หมายเหตุ"
                     value={item.comment}
                     onChange={(e) => handleCommentChange(index, e.target.value)}
                     fullWidth
@@ -283,7 +244,6 @@ const IncomesForm = () => {
             </Box>
           ))}
         </Box>
-
         <Button
           variant="contained"
           color="success"
@@ -293,26 +253,33 @@ const IncomesForm = () => {
         >
           บันทึกรายการ
         </Button>
-
         <Box sx={{ mt: 4, p: 2, border: '1px solid #e43733', borderRadius: 2 }}>
           <Box sx={{ mt: 2 }}>
-          <Typography variant={'inherit'} sx={{mt:2, p:2}}>รายการอื่นๆเพิ่มเติม ให้เพิ่มรายการแล้วกดที่ &quot;ปุ่มเพิ่มรายการ&quot; ก่อนแล้วจึงกด &quot;บันทึกรายการอีกครั้ง&quot;</Typography>
+            <Typography variant="subtitle2" mt={2}>
+              รายการอื่นๆเพิ่มเติม ให้เพิ่มรายการแล้วกดที่
+              &ldquo;ปุ่มเพิ่มรายการ&ldquo; ก่อนแล้วจึงกด
+              &ldquo;บันทึกรายการอีกครั้ง&ldquo;
+            </Typography>
             <TextField
               label="รายการ"
               value={newItem.label}
-              onChange={(e) => setNewItem({ ...newItem, label: e.target.value })}
+              onChange={(e) =>
+                setNewItem({ ...newItem, label: e.target.value })
+              }
               fullWidth
               sx={{ mb: 2 }}
             />
             <TextField
               label="จำนวนเงิน"
               value={newItem.amount}
-              onChange={(e) => setNewItem({ ...newItem, amount: e.target.value })}
+              onChange={(e) =>
+                setNewItem({ ...newItem, amount: e.target.value })
+              }
               fullWidth
               sx={{ mb: 2 }}
             />
             <TextField
-              label="รายละเอียด"
+              label="หมายเหตุ"
               value={newItem.comment}
               onChange={(e) =>
                 setNewItem({ ...newItem, comment: e.target.value })
@@ -321,14 +288,12 @@ const IncomesForm = () => {
               sx={{ mb: 2 }}
             />
           </Box>
-
           <Button
             variant="contained"
-            color="primary"
+            color="secondary"
             startIcon={<AddCircleIcon />}
             onClick={handleAddItem}
             fullWidth
-            sx={{ mt: 2 }}
           >
             เพิ่มรายการ
           </Button>
@@ -336,14 +301,18 @@ const IncomesForm = () => {
       </Box>
       <Dialog open={dialogOpen} onClose={handleCloseDialog}>
         <DialogTitle>ข้อผิดพลาด</DialogTitle>
-        <DialogContent>ไม่พบ userId กรุณาลงชื่อเข้าใช้ใหม่</DialogContent>
+        <DialogContent>
+          <Typography>ไม่พบ userId กรุณาลงชื่อเข้าใช้ใหม่</Typography>
+        </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDialog}>ตกลง</Button>
         </DialogActions>
       </Dialog>
       <Dialog open={successDialogOpen} onClose={handleCloseSuccessDialog}>
         <DialogTitle>บันทึกสำเร็จ</DialogTitle>
-        <DialogContent>บันทึกข้อมูลรายได้สำเร็จ!</DialogContent>
+        <DialogContent>
+          <Typography>บันทึกข้อมูลรายได้สำเร็จ!</Typography>
+        </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseSuccessDialog}>ตกลง</Button>
         </DialogActions>

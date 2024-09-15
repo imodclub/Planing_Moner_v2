@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import Income from '@/models/incomes.model';
 import Expense from '@/models/expenses.model';
 import Saving from '@/models/savings.model';
+import { verifyAuth } from '@/lib/auth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -16,14 +17,16 @@ export default async function handler(
 
   await dbConnect();
 
-  const { userId } = req.query;
-
-  // ตรวจสอบว่า userId เป็น ObjectId ที่ถูกต้องหรือไม่
-  if (!mongoose.Types.ObjectId.isValid(userId as string)) {
-    return res.status(400).json({ message: 'Invalid userId format' });
-  }
-
   try {
+    // ตรวจสอบการยืนยันตัวตนและรับ userId
+    const user = await verifyAuth(req);
+    const userId = user.userId;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid userId format' });
+    }
+
+ 
     // ดึงข้อมูลรายรับ
     const incomeData = await Income.aggregate([
       { $match: { userId: new mongoose.Types.ObjectId(userId as string) } },

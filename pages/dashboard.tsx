@@ -1,14 +1,29 @@
 // pages/dashboard.tsx
 import { GetServerSideProps } from 'next';
 import { Container, Box, Typography } from '@mui/material';
-import AnnualFinancialSummaryChart from '@/components/AnnualFinancialSummaryChart';
-import TotalIncome from '@/components/TotalIncome';
-import TotalExpense from '@/components/TotalExpense';
+
 import { withAuth } from '@/components/withAuth';
-import {verifyAuth} from '@/lib/auth'
+import { verifyAuth } from '@/lib/auth'
+import { useAuth } from '@/context/AuthContext';
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 
 
 function Dashboard() {
+  const { user, isLoggedIn } = useAuth(); // ใช้ useAuth hook
+  const router = useRouter(); // ใช้ useRouter
+
+  useEffect(() => {
+    console.log('Dashboard - user:', user);
+    console.log('Dashboard - isLoggedIn:', isLoggedIn);
+    if (!isLoggedIn || !user) {
+      router.push('/login');
+    }
+  }, [isLoggedIn, user, router]);
+
+  if (!user) {
+    return <div>Loading...</div>;
+  }
   
   return (
     <Container component="main" maxWidth="sm">
@@ -19,15 +34,20 @@ function Dashboard() {
           </Typography>
         </Box>
         <Box>
-          <AnnualFinancialSummaryChart />
+          <Typography variant="h6" component="h1" gutterBottom>
+            รายงาน 1
+          </Typography>
+        </Box>
+        <Box sx={{ mt: 4 }}></Box>
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" component="h1" gutterBottom>
+            รายงาน 2
+          </Typography>
         </Box>
         <Box sx={{ mt: 4 }}>
-        </Box>
-        <Box sx={{ mt: 4 }}>
-          <TotalIncome />
-        </Box>
-        <Box sx={{ mt: 4 }}>
-          <TotalExpense />
+          <Typography variant="h6" component="h1" gutterBottom>
+            รายงาน 3
+          </Typography>
         </Box>
       </Box>
     </Container>

@@ -11,8 +11,8 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { verifyAuth } from '@/lib/auth';
 import { useRouter } from 'next/router';
+import { useAuth } from '@/context/AuthContext';
 
 ChartJS.register(
   CategoryScale,
@@ -37,15 +37,20 @@ const AnnualFinancialSummaryChart: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const { userId } = useAuth();
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const user = await verifyAuth();
+      if (!userId) {
+        router.push('/login');
+        return;
+      }
 
-        // เรียก API เพื่อดึงข้อมูลการเงิน
+      try {
+        
+        // เปลี่ยนการเรียก API ให้ใช้ userId จาก useAuth
         const financialSummaryResponse = await fetch(
-          `/api/financial-summary/${user.userId}`
+          `/api/financial-summary/${userId}`
         );
         if (!financialSummaryResponse.ok) {
           throw new Error('Failed to fetch financial summary');
@@ -62,7 +67,7 @@ const AnnualFinancialSummaryChart: React.FC = () => {
     };
 
     fetchData();
-  }, [router]);
+  }, [router, userId]); // เพิ่ม userId เป็น dependency ของ useEffect
 
   const options = {
     responsive: true,

@@ -7,7 +7,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
-import Link from '@mui/material/Link';
+import NextLink from 'next/link';
 import { useRouter } from 'next/router';
 import { useDrawer } from '@/context/DrawerContext';
 import { useAuth } from '@/context/AuthContext';
@@ -16,6 +16,7 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
+import Cookies from 'js-cookie';
 
 
 
@@ -37,15 +38,26 @@ const MyAppBar: React.FC = () => {
     setDialogOpen(false);
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/logout', { method: 'POST' });
-      logout();
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
-    }
-  };
+   const handleLogout = async () => {
+     try {
+       // เรียก API เพื่อทำ logout ที่ server-side
+       await fetch('/api/logout', { method: 'POST' });
+
+       // ลบ cookie ทั้งหมด
+       const cookies = Cookies.get();
+       for (const cookie in cookies) {
+         Cookies.remove(cookie);
+       }
+
+       // เรียกใช้ฟังก์ชัน logout จาก AuthContext
+       logout();
+
+       // Redirect ไปยังหน้า login
+       router.push('/login');
+     } catch (error) {
+       console.error('Logout failed:', error);
+     }
+   };
 
   const handleLogin = () => {
     router.push('/login');
@@ -64,9 +76,9 @@ const MyAppBar: React.FC = () => {
             <MenuIcon />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            <Link href="/" sx={{ color: 'white', textDecoration: 'none' }}>
+            <Button href="/" component="a" sx={{ color: 'white', textDecoration: 'none' }} LinkComponent={NextLink}>
               โปรแกรมรายรับรายจ่าย
-            </Link>
+            </Button>
           </Typography>
           <Button
             color="inherit"
