@@ -9,6 +9,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 import AnnualFinancialSummaryChart from '@/components/AnnualFinancialSummaryChart';
 import MonthlyIncomeSummary from '@/components/MonthlyIncomeSummary';
+import MonthlyExpenseSummary from '@/components/MonthlyExpenseSummary';
+import MonthlySavingSummary from '@/components/MonthlySavingSummary';
 
 
 
@@ -49,7 +51,12 @@ function Dashboard() {
         </Box>
         <Box sx={{ mt: 4 }}>
           <Typography variant="h6" component="h1" gutterBottom>
-            รายงาน 3
+            <MonthlyExpenseSummary />
+          </Typography>
+        </Box>
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h6" component="h1" gutterBottom>
+            <MonthlySavingSummary />
           </Typography>
         </Box>
       </Box>
