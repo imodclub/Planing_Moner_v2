@@ -1,4 +1,4 @@
-// pages/api/save-expenses.ts
+// pages/api/save-saving.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '@/models/db';
 import Saving from '@/models/savings.model';

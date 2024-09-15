@@ -1,4 +1,4 @@
-// pages/api/income-list.ts
+// pages/api/saving-list.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '@/models/db';
 import SavingList from '@/models/saving-list.model';

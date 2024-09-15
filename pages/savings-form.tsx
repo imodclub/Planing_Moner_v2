@@ -26,13 +26,16 @@ interface SavingItem {
   comment: string;
 }
 
+const defaultSavingItems: SavingItem[] = [
+  { label: 'เงินฝาก', amount: '', comment: '' },
+  { label: 'เงินฝากเงินหุ้นระยะยาว', amount: '', comment: '' },
+  { label: 'ลงทุนหุ้นหรือ DCA', amount: '', comment: '' },
+];
+
 const SavingForm: React.FC = () => {
   const [date, setDate] = useState<Dayjs>(dayjs());
-  const [savingItems, setSavingItems] = useState<SavingItem[]>([
-    { label: 'เงินเดือน', amount: '', comment: '' },
-    { label: 'เงินปันผล, โบนัส', amount: '', comment: '' },
-    { label: 'รายได้เสริม', amount: '', comment: '' },
-  ]);
+  const [savingItems, setSavingItems] =
+    useState<SavingItem[]>(defaultSavingItems);
   const [newItem, setNewItem] = useState<SavingItem>({
     label: '',
     amount: '',
@@ -45,59 +48,44 @@ const SavingForm: React.FC = () => {
   const { user, isLoggedIn } = useAuth();
   const userId = user?.userId;
 
-  const fetchSavingItems = useCallback(async () => {
+  const fetchLatestSavingList = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/saving-list/${userId}`);
+      const response = await fetch(`/api/saving-list/${userId}/latest`);
       if (response.ok) {
         const data = await response.json();
-        setSavingItems(data.items);
+        if (data && data.items) {
+          const existingLabels = savingItems.map((item) => item.label);
+          const newItems = data.items.filter(
+            (item: SavingItem) => !existingLabels.includes(item.label)
+          );
+          setSavingItems([...savingItems, ...newItems]);
+        }
       } else {
-        throw new Error('Failed to fetch saving items');
+        throw new Error('Failed to fetch latest saving list');
       }
     } catch (error) {
-      console.error('Error fetching saving items:', error);
+      console.error('Error fetching latest saving list:', error);
       setError('Failed to load saving items. Please try again.');
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, savingItems]);
 
   useEffect(() => {
     if (isLoggedIn && userId) {
-      fetchSavingItems();
+      fetchLatestSavingList();
     } else {
       setLoading(false);
     }
-  }, [fetchSavingItems, isLoggedIn, userId]);
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
-
-  if (!isLoggedIn || !userId) {
-    return <div>Please log in to access this form.</div>;
-  }
+  }, [fetchLatestSavingList, isLoggedIn, userId]);
 
   const handleAmountChange = (index: number, value: string) => {
     const updatedItems = [...savingItems];
     updatedItems[index].amount = value.replace(/,/g, '');
     setSavingItems(updatedItems);
-  };
-
-  const formatAmount = (amount: string | number | undefined) => {
-    if (typeof amount === 'number') {
-      amount = amount.toString();
-    }
-    return amount && typeof amount === 'string'
-      ? amount.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-      : '';
   };
 
   const handleCommentChange = (index: number, value: string) => {
@@ -108,57 +96,41 @@ const SavingForm: React.FC = () => {
 
   const handleAddItem = async () => {
     if (newItem.label && newItem.amount && userId) {
-      setSavingItems([...savingItems, newItem]);
       try {
         const response = await fetch('/api/saving-list', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId: userId,
-            items: [...savingItems, newItem],
+            items: [newItem],
           }),
         });
         if (response.ok) {
-          console.log('saving list saved successfully');
+          console.log('New item added to saving list successfully');
+          setSavingItems([...savingItems, newItem]);
+          setNewItem({ label: '', amount: '', comment: '' });
+          fetchLatestSavingList(); // Fetch updated list
         } else {
-          console.error('Failed to save saving list');
+          console.error('Failed to add new item to saving list');
         }
       } catch (error) {
         console.error('Error:', error);
       }
-      setNewItem({ label: '', amount: '', comment: '' });
     }
   };
 
-  const handleDeleteItem = async (index: number) => {
-    if (!userId) return;
-    try {
-      const updatedItems = savingItems.filter((_, i) => i !== index);
-      setSavingItems(updatedItems);
-      const response = await fetch(`/api/saving-list/${userId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ index }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to delete item');
-      }
-      console.log('Item deleted successfully');
-    } catch (error) {
-      console.error('Error deleting item:', error);
-      setSavingItems([...savingItems]);
-    }
+  const handleDeleteItem = (index: number) => {
+    const updatedItems = savingItems.filter((_, i) => i !== index);
+    setSavingItems(updatedItems);
   };
 
   const handleSave = async () => {
-    console.log('handleSave - Initial userId:', userId);
     if (!userId) {
       setDialogOpen(true);
       return;
     }
     try {
       const formattedDate = date.format('YYYY-MM-DD');
-      console.log('handleSave - Sending request with userId:', userId);
       const response = await fetch(`/api/saving/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -170,15 +142,12 @@ const SavingForm: React.FC = () => {
         }),
       });
       if (response.ok) {
-        console.log('handleSave - Request successful for userId:', userId);
         setSuccessDialogOpen(true);
-        setSavingItems([
-          { label: 'เงินเดือน', amount: '', comment: '' },
-          { label: 'โบนัส', amount: '', comment: '' },
-          { label: 'รายได้เสริม', amount: '', comment: '' },
-        ]);
+        // Reset form after successful save
+        setSavingItems(defaultSavingItems);
+        setDate(dayjs());
       } else {
-        console.log('handleSave - Request failed for userId:', userId);
+        throw new Error('Failed to save savings');
       }
     } catch (error) {
       console.error('Error saving savings:', error);
@@ -189,8 +158,16 @@ const SavingForm: React.FC = () => {
   const handleCloseDialog = () => setDialogOpen(false);
   const handleCloseSuccessDialog = () => setSuccessDialogOpen(false);
 
-  if (!isLoggedIn) {
-    return <Typography>กรุณาเข้าสู่ระบบเพื่อบันทึกรายรับ</Typography>;
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
+
+  if (!isLoggedIn || !userId) {
+    return <div>Please log in to access this form.</div>;
   }
 
   return (
@@ -219,7 +196,7 @@ const SavingForm: React.FC = () => {
                   <Typography variant={'inherit'}>{item.label}</Typography>
                   <TextField
                     label="จำนวนเงิน"
-                    value={formatAmount(item.amount)}
+                    value={item.amount}
                     onChange={(e) => handleAmountChange(index, e.target.value)}
                     fullWidth
                     sx={{ mr: 2, mt: 2 }}
