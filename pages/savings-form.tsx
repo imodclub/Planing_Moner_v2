@@ -26,16 +26,13 @@ interface SavingItem {
   comment: string;
 }
 
-const defaultSavingItems: SavingItem[] = [
-  { label: 'เงินฝาก', amount: '', comment: '' },
-  { label: 'เงินฝากเงินหุ้นระยะยาว', amount: '', comment: '' },
-  { label: 'ลงทุนหุ้นหรือ DCA', amount: '', comment: '' },
-];
-
 const SavingForm: React.FC = () => {
   const [date, setDate] = useState<Dayjs>(dayjs());
-  const [savingItems, setSavingItems] =
-    useState<SavingItem[]>(defaultSavingItems);
+  const [savingItems, setSavingItems] = useState<SavingItem[]>([
+    { label: 'เงินฝาก', amount: '', comment: '' },
+    { label: 'เงินลงทุนหุ้นระยะยาว', amount: '', comment: '' },
+    { label: 'เงินลงทุนหุ้น DCA', amount: '', comment: '' },
+  ]);
   const [newItem, setNewItem] = useState<SavingItem>({
     label: '',
     amount: '',
@@ -48,26 +45,58 @@ const SavingForm: React.FC = () => {
   const { user, isLoggedIn } = useAuth();
   const userId = user?.userId;
 
-  const fetchLatestSavingList = useCallback(async () => {
+  const fetchSavingItems = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     setError(null);
+
+    const saveDefaultItems = async (items: SavingItem[]) => {
+       console.log('Fetching saving items from:', `/api/saving-list/${userId}`);
+      try {
+        const response = await fetch('/api/saving-list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,
+            items: items,
+          }),
+        });
+        if (!response.ok) {
+          throw new Error('Failed to save default items');
+        }
+      } catch (error) {
+        console.error('Error saving default items:', error);
+      }
+    };
+
     try {
-      const response = await fetch(`/api/saving-list/${userId}/latest`);
+      const response = await fetch(`/api/saving-list/${userId}`);
       if (response.ok) {
         const data = await response.json();
-        if (data && data.items) {
-          const existingLabels = savingItems.map((item) => item.label);
-          const newItems = data.items.filter(
+        if (data.items && data.items.length > 0) {
+          // ตรวจสอบและรวมรายการที่มีอยู่แล้วกับรายการใหม่
+          const existingLabels = data.items.map(
+            (item: SavingItem) => item.label
+          );
+          const newDefaultItems = savingItems.filter(
             (item: SavingItem) => !existingLabels.includes(item.label)
           );
-          setSavingItems([...savingItems, ...newItems]);
+          setSavingItems([...data.items, ...newDefaultItems]);
+        } else {
+          // ไม่พบข้อมูล ทำการบันทึกรายการเริ่มต้น
+          const defaultItems = [
+            { label: 'เงินฝาก', amount: '', comment: '' },
+            { label: 'เงินลงทุนหุ้นระยะยาว', amount: '', comment: '' },
+            { label: 'เงินลงทุนหุ้น DCA', amount: '', comment: '' },
+          ];
+          await saveDefaultItems(defaultItems);
+          setSavingItems(defaultItems);
         }
       } else {
-        throw new Error('Failed to fetch latest saving list');
+        throw new Error('Failed to fetch saving items');
       }
     } catch (error) {
-      console.error('Error fetching latest saving list:', error);
+      console.error('Error fetching saving items:', error);
       setError('Failed to load saving items. Please try again.');
     } finally {
       setLoading(false);
@@ -76,11 +105,16 @@ const SavingForm: React.FC = () => {
 
   useEffect(() => {
     if (isLoggedIn && userId) {
-      fetchLatestSavingList();
+      fetchSavingItems();
     } else {
       setLoading(false);
+      setSavingItems([
+        { label: 'เงินฝาก', amount: '', comment: '' },
+        { label: 'เงินลงทุนหุ้นระยะยาว', amount: '', comment: '' },
+        { label: 'เงินลงทุนหุ้น DCA', amount: '', comment: '' },
+      ]);
     }
-  }, [fetchLatestSavingList, isLoggedIn, userId]);
+  }, [fetchSavingItems, isLoggedIn, userId]);
 
   const handleAmountChange = (index: number, value: string) => {
     const updatedItems = [...savingItems];
@@ -96,32 +130,46 @@ const SavingForm: React.FC = () => {
 
   const handleAddItem = async () => {
     if (newItem.label && newItem.amount && userId) {
+      setSavingItems([...savingItems, newItem]);
       try {
         const response = await fetch('/api/saving-list', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             userId: userId,
-            items: [newItem],
+            items: [...savingItems, newItem],
           }),
         });
         if (response.ok) {
-          console.log('New item added to saving list successfully');
-          setSavingItems([...savingItems, newItem]);
-          setNewItem({ label: '', amount: '', comment: '' });
-          fetchLatestSavingList(); // Fetch updated list
+          console.log('Saving list saved successfully');
         } else {
-          console.error('Failed to add new item to saving list');
+          console.error('Failed to save saving list');
         }
       } catch (error) {
         console.error('Error:', error);
       }
+      setNewItem({ label: '', amount: '', comment: '' });
     }
   };
 
-  const handleDeleteItem = (index: number) => {
-    const updatedItems = savingItems.filter((_, i) => i !== index);
-    setSavingItems(updatedItems);
+  const handleDeleteItem = async (index: number) => {
+    if (!userId) return;
+    try {
+      const updatedItems = savingItems.filter((_, i) => i !== index);
+      setSavingItems(updatedItems);
+      const response = await fetch(`/api/saving-list/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ index }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete item');
+      }
+      console.log('Item deleted successfully');
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      setSavingItems([...savingItems]);
+    }
   };
 
   const handleSave = async () => {
@@ -143,9 +191,11 @@ const SavingForm: React.FC = () => {
       });
       if (response.ok) {
         setSuccessDialogOpen(true);
-        // Reset form after successful save
-        setSavingItems(defaultSavingItems);
-        setDate(dayjs());
+        setSavingItems([
+          { label: 'เงินฝาก', amount: '', comment: '' },
+          { label: 'เงินลงทุนหุ้นระยะยาว', amount: '', comment: '' },
+          { label: 'เงินลงทุนหุ้น DCA', amount: '', comment: '' },
+        ]);
       } else {
         throw new Error('Failed to save savings');
       }
@@ -171,109 +221,87 @@ const SavingForm: React.FC = () => {
   }
 
   return (
-    <Container component="main" maxWidth="sm">
-      <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          บันทึกเงินออมของคุณ
-        </Typography>
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <DatePicker
-            label="วันที่บันทึก"
-            value={date}
-            onChange={(newValue: Dayjs | null) => {
-              if (newValue) setDate(newValue);
-            }}
-            slots={{
-              textField: (params) => <TextField {...params} fullWidth />,
-            }}
-          />
-        </LocalizationProvider>
-        <Box sx={{ mt: 2 }}>
-          {savingItems.map((item, index) => (
-            <Box key={index} display="flex" alignItems="center" my={2}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant={'inherit'}>{item.label}</Typography>
-                  <TextField
-                    label="จำนวนเงิน"
-                    value={item.amount}
-                    onChange={(e) => handleAmountChange(index, e.target.value)}
-                    fullWidth
-                    sx={{ mr: 2, mt: 2 }}
-                  />
-                  <TextField
-                    label="หมายเหตุ"
-                    value={item.comment}
-                    onChange={(e) => handleCommentChange(index, e.target.value)}
-                    fullWidth
-                    sx={{ mr: 2, mt: 2 }}
-                  />
-                  <IconButton
-                    onClick={() => handleDeleteItem(index)}
-                    color="error"
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </Box>
-              </Box>
-            </Box>
-          ))}
-        </Box>
-        <Button
-          variant="contained"
-          color="success"
-          onClick={handleSave}
-          fullWidth
-          sx={{ mt: 2 }}
-        >
-          บันทึกรายการ
-        </Button>
-        <Box sx={{ mt: 4, p: 2, border: '1px solid #e43733', borderRadius: 2 }}>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" mt={2}>
-              รายการอื่นๆเพิ่มเติม ให้เพิ่มรายการแล้วกดที่
-              &ldquo;ปุ่มเพิ่มรายการ&ldquo; ก่อนแล้วจึงกด
-              &ldquo;บันทึกรายการอีกครั้ง&ldquo;
-            </Typography>
-            <TextField
-              label="รายการ"
-              value={newItem.label}
-              onChange={(e) =>
-                setNewItem({ ...newItem, label: e.target.value })
-              }
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="จำนวนเงิน"
-              value={newItem.amount}
-              onChange={(e) =>
-                setNewItem({ ...newItem, amount: e.target.value })
-              }
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              label="หมายเหตุ"
-              value={newItem.comment}
-              onChange={(e) =>
-                setNewItem({ ...newItem, comment: e.target.value })
-              }
-              fullWidth
-              sx={{ mb: 2 }}
-            />
-          </Box>
-          <Button
-            variant="contained"
-            color="secondary"
-            startIcon={<AddCircleIcon />}
-            onClick={handleAddItem}
+    <Container>
+      <Typography variant="h4" gutterBottom>
+        บันทึกเงินออมของคุณ
+      </Typography>
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <DatePicker
+          label="วันที่บันทึก"
+          value={date}
+          onChange={(newValue: Dayjs | null) => {
+            if (newValue) setDate(newValue);
+          }}
+          slots={{
+            textField: (params) => <TextField {...params} fullWidth />,
+          }}
+        />
+      </LocalizationProvider>
+      {savingItems.map((item, index) => (
+        <Box key={index} sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <TextField
+            label={item.label}
+            value={item.amount}
+            onChange={(e) => handleAmountChange(index, e.target.value)}
             fullWidth
-          >
-            เพิ่มรายการ
-          </Button>
+            sx={{ mr: 2 }}
+          />
+          <TextField
+            label="หมายเหตุ"
+            value={item.comment}
+            onChange={(e) => handleCommentChange(index, e.target.value)}
+            fullWidth
+            sx={{ mr: 2 }}
+          />
+          <IconButton onClick={() => handleDeleteItem(index)} color="error">
+            <DeleteIcon />
+          </IconButton>
         </Box>
-      </Box>
+      ))}
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={handleSave}
+        fullWidth
+        sx={{ mt: 2, mb: 2 }}
+      >
+        บันทึกรายการ
+      </Button>
+      <Typography variant="body2" gutterBottom>
+        รายการอื่นๆเพิ่มเติม ให้เพิ่มรายการแล้วกดที่
+        &ldquo;ปุ่มเพิ่มรายการ&ldquo; ก่อนแล้วจึงกด
+        &ldquo;บันทึกรายการอีกครั้ง&ldquo;
+      </Typography>
+      <TextField
+        label="รายการ"
+        value={newItem.label}
+        onChange={(e) => setNewItem({ ...newItem, label: e.target.value })}
+        fullWidth
+        sx={{ mb: 2 }}
+      />
+      <TextField
+        label="จำนวนเงิน"
+        value={newItem.amount}
+        onChange={(e) => setNewItem({ ...newItem, amount: e.target.value })}
+        fullWidth
+        sx={{ mb: 2 }}
+      />
+      <TextField
+        label="หมายเหตุ"
+        value={newItem.comment}
+        onChange={(e) => setNewItem({ ...newItem, comment: e.target.value })}
+        fullWidth
+        sx={{ mb: 2 }}
+      />
+      <Button
+        variant="contained"
+        color="secondary"
+        startIcon={<AddCircleIcon />}
+        onClick={handleAddItem}
+        fullWidth
+      >
+        เพิ่มรายการ
+      </Button>
       <Dialog open={dialogOpen} onClose={handleCloseDialog}>
         <DialogTitle>ข้อผิดพลาด</DialogTitle>
         <DialogContent>
@@ -286,7 +314,7 @@ const SavingForm: React.FC = () => {
       <Dialog open={successDialogOpen} onClose={handleCloseSuccessDialog}>
         <DialogTitle>บันทึกสำเร็จ</DialogTitle>
         <DialogContent>
-          <Typography>บันทึกข้อมูลรายได้สำเร็จ!</Typography>
+          <Typography>บันทึกข้อมูลเงินออมสำเร็จ!</Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseSuccessDialog}>ตกลง</Button>

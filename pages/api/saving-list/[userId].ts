@@ -3,21 +3,16 @@ import dbConnect from '@/models/db';
 import SavingList from '@/models/saving-list.model';
 import mongoose from 'mongoose';
 
-// กำหนด interface สำหรับ item ใน userSavingList
-interface SavingListItem {
+interface SavingList {
   label: string;
-  amount: number | string;
-  comment: string;
+  amount?: number | string;
+  comment?: string;
 }
 
-// กำหนด type สำหรับ itemsWithLabel
-type ItemWithLabel = {
-  label: string;
-  amount: string; // เปลี่ยนเป็น string เท่านั้น
-  comment: string;
-};
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
   await dbConnect(); // เชื่อมต่อกับฐานข้อมูล
 
   const { userId } = req.query;
@@ -30,6 +25,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   switch (req.method) {
     case 'GET':
       return handleGet(req, res, userId as string);
+    case 'POST':
+      return handlePost(req, res, userId as string);
     case 'DELETE':
       return handleDelete(req, res, userId as string);
     default:
@@ -37,61 +34,84 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 }
 
-async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: string) {
+async function handleGet(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  userId: string
+) {
   try {
-    // ค้นหาข้อมูลล่าสุดโดยใช้ฟิลด์ userId
     const latestSavingList = await SavingList.findOne({ userId })
-      .sort({ _id: -1 }) // เรียงลำดับตาม _id จากใหม่ไปเก่า
-      .select('items createdAt _id'); // เลือกเฉพาะฟิลด์ที่ต้องการ
+      .sort({ _id: -1 })
+      .select('items createdAt _id');
 
     if (!latestSavingList) {
-      return res.status(404).json({ message: 'Saving list not found for this user' });
+      return res
+        .status(404)
+        .json({ message: 'Saving list not found for this user' });
     }
 
-    // ดึงข้อมูล items
-    const itemsWithLabel: ItemWithLabel[] = latestSavingList.items.map((item: SavingListItem) => ({
+    const itemsWithLabel = latestSavingList.items.map((item: SavingList) => ({
       label: item.label,
       amount: '',
-      comment: item.comment ?? '', // ใช้ nullish coalescing operator
+      comment: item.comment ?? '',
     }));
 
-    // ส่งข้อมูล items กลับไป
-    return res.status(200).json({ 
+    return res.status(200).json({
       items: itemsWithLabel,
       createdAt: latestSavingList.createdAt,
-      _id: latestSavingList._id
+      _id: latestSavingList._id,
     });
-
   } catch (error) {
     console.error('Error fetching user items:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
 
-async function handleDelete(req: NextApiRequest, res: NextApiResponse, userId: string) {
+async function handlePost(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  userId: string
+) {
+  try {
+    const { items, timestamp } = req.body;
+    const newSavingList = new SavingList({
+      userId,
+      timestamp,
+      items: items,
+    });
+    await newSavingList.save();
+    return res.status(200).json({ message: 'Saving list saved successfully' });
+  } catch (error) {
+    console.error('Error saving saving list:', error);
+    return res.status(500).json({ message: 'Failed to save saving list' });
+  }
+}
+
+async function handleDelete(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  userId: string
+) {
   try {
     const { index } = req.body;
-
-    // ค้นหา SavingList ล่าสุดของ user
-    const latestSavingList = await SavingList.findOne({ userId }).sort({ _id: -1 });
+    const latestSavingList = await SavingList.findOne({ userId }).sort({
+      _id: -1,
+    });
 
     if (!latestSavingList) {
-      return res.status(404).json({ message: 'Saving list not found for this user' });
+      return res
+        .status(404)
+        .json({ message: 'Saving list not found for this user' });
     }
 
-    // ตรวจสอบว่า index ที่ระบุอยู่ในช่วงที่ถูกต้อง
     if (index < 0 || index >= latestSavingList.items.length) {
       return res.status(400).json({ message: 'Invalid item index' });
     }
 
-    // ลบ item ที่ index ที่ระบุ
     latestSavingList.items.splice(index, 1);
-
-    // บันทึกการเปลี่ยนแปลง
     await latestSavingList.save();
 
     return res.status(200).json({ message: 'Item deleted successfully' });
-
   } catch (error) {
     console.error('Error deleting item:', error);
     return res.status(500).json({ message: 'Internal server error' });
