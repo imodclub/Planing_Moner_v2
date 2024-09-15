@@ -1,6 +1,6 @@
 // components/AnnualFinancialSummaryChart.tsx
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -11,7 +11,6 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js';
-import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
 
 ChartJS.register(
@@ -36,38 +35,64 @@ const AnnualFinancialSummaryChart: React.FC = () => {
     savings: [],
   });
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-  const { userId } = useAuth();
+  const { user, isLoggedIn } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const userId = user?.userId;
+
+  const fetchDataSummary = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/financial-summary/${userId}`);
+      if (response.ok) {
+        if (response.status !== 304) {
+          const data = await response.json();
+          setFinancialData(data);
+        } else {
+          // ข้อมูลไม่เปลี่ยนแปลง ใช้ข้อมูลที่มีอยู่
+          console.log('Data not modified, using cached data');
+        }
+      } else {
+        throw new Error('Failed to fetch financial summary');
+      }
+    } catch (error) {
+      console.error('Error fetching financial summary:', error);
+      setError('Failed to load financial summary. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (!userId) {
-        router.push('/login');
-        return;
-      }
+    if (isLoggedIn && userId) {
+      fetchDataSummary();
+    } else {
+      setLoading(false);
+    }
+  }, [fetchDataSummary, isLoggedIn, userId]);
 
-      try {
-        
-        // เปลี่ยนการเรียก API ให้ใช้ userId จาก useAuth
-        const financialSummaryResponse = await fetch(
-          `/api/financial-summary/${userId}`
-        );
-        if (!financialSummaryResponse.ok) {
-          throw new Error('Failed to fetch financial summary');
-        }
+ if (loading) {
+   return <div>กำลังโหลดข้อมูล...</div>;
+ }
 
-        const data = await financialSummaryResponse.json();
-        setFinancialData(data);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        router.push('/login');
-      } finally {
-        setLoading(false);
-      }
-    };
+ if (error) {
+   return <div>Error: {error}</div>;
+ }
 
-    fetchData();
-  }, [router, userId]); // เพิ่ม userId เป็น dependency ของ useEffect
+ if (!isLoggedIn || !userId) {
+   return <div>Please log in to access this chart.</div>;
+ }
+
+ if (
+   !financialData.income.length &&
+   !financialData.expenses.length &&
+   !financialData.savings.length
+ ) {
+   return <div>No financial data available.</div>;
+ }
+
+
 
   const options = {
     responsive: true,
@@ -124,7 +149,7 @@ const AnnualFinancialSummaryChart: React.FC = () => {
 
   return (
     <div>
-      <h3>รายงานสรุปการเงินประจำปี</h3>
+      <h4>รายงานสรุปการเงินประจำปี</h4>
       <Bar options={options} data={data} />
     </div>
   );

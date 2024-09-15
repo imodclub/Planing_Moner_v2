@@ -4,21 +4,17 @@ import Layout from '@/components/layout';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DrawerProvider } from '@/context/DrawerContext';
-import { Kanit } from 'next/font/google';
 import { useRouter } from 'next/router';
 import { useCallback, useEffect } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { ThemeProvider } from '@mui/material/styles';
+import theme from '@/styles/theme';
 
-const kanit = Kanit({
-  weight: ['300', '400', '700'],
-  subsets: ['thai', 'latin'],
-  display: 'swap',
-  variable: '--font-kanit',
-});
+
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
-    <div className={`${kanit.variable} font-sans`}>
+    <ThemeProvider theme={theme}>
       <AuthProvider>
         <DrawerProvider>
           <Layout>
@@ -30,7 +26,7 @@ function MyApp({ Component, pageProps }: AppProps) {
           </Layout>
         </DrawerProvider>
       </AuthProvider>
-    </div>
+    </ThemeProvider>
   );
 }
 

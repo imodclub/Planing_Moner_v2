@@ -7,6 +7,9 @@ import { verifyAuth } from '@/lib/auth'
 import { useAuth } from '@/context/AuthContext';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
+import AnnualFinancialSummaryChart from '@/components/AnnualFinancialSummaryChart';
+import MonthlyIncomeSummary from '@/components/MonthlyIncomeSummary';
+
 
 
 function Dashboard() {
@@ -29,19 +32,19 @@ function Dashboard() {
     <Container component="main" maxWidth="sm">
       <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
         <Box>
-          <Typography variant="h6" component="h1" gutterBottom>
+          <Typography variant="h4" component="h1" gutterBottom>
             รายงานรายรับ-รายจ่าย และเงินออมของคุณ
           </Typography>
         </Box>
         <Box>
           <Typography variant="h6" component="h1" gutterBottom>
-            รายงาน 1
+            <AnnualFinancialSummaryChart />
           </Typography>
         </Box>
         <Box sx={{ mt: 4 }}></Box>
         <Box sx={{ mt: 4 }}>
           <Typography variant="h6" component="h1" gutterBottom>
-            รายงาน 2
+            <MonthlyIncomeSummary />
           </Typography>
         </Box>
         <Box sx={{ mt: 4 }}>
