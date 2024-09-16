@@ -16,6 +16,7 @@ export default async function handler(
   await dbConnect();
 
   const { userId } = req.query;
+  console.log('Received data in API:', JSON.stringify(req.body, null, 2));
 
   switch (req.method) {
     case 'GET':
@@ -46,22 +47,32 @@ export default async function handler(
         return res.status(500).json({ message: 'Internal server error' });
       }
 
-    case 'POST':
-      try {
-        const { date, savingItem, timestamp } = req.body;
-        const newSaving = new Saving({
-          userId,
-          date,
-          timestamp,
-          items: savingItem,
-        });
-        await newSaving.save();
-        res.status(200).json({ message: 'Saving saved successfully' });
-      } catch (error) {
-        console.error('Error saving saving:', error);
-        res.status(500).json({ error: 'Failed to save saving' });
-      }
-      break;
+      case 'POST':
+  try {
+    const { date, items, timestamp } = req.body;
+    console.log('Received data:', { date, items, timestamp });
+
+    if (!items || !Array.isArray(items)) {
+      return res.status(400).json({ error: 'Invalid or missing items data' });
+    }
+
+    const newSaving = new Saving({
+      userId,
+      date,
+      timestamp,
+      items: items.map(item => ({
+        ...item,
+        amount: item.amount ? parseFloat(item.amount) : 0
+      }))
+    });
+
+    await newSaving.save();
+    res.status(200).json({ message: 'Saving saved successfully' });
+  } catch (error) {
+    console.error('Error saving saving:', error);
+    res.status(500).json({ error: 'Failed to save saving' });
+  }
+  break;
 
     default:
       res.setHeader('Allow', ['GET', 'POST']);
