@@ -18,34 +18,20 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { useAuth } from '@/context/AuthContext';
 
-
 interface ExpenseItem {
   label: string;
   amount: string;
   comment: string;
 }
 
-const ExpensesForm:React.FC = () => {
+const ExpensesForm: React.FC = () => {
   const [date, setDate] = useState<Dayjs>(dayjs());
-  const [expenseItems, setExpenseItems] = useState<ExpenseItem[]>([
-    { label: 'ค่าผ่อนบ้าน', amount: '', comment: '' },
-    { label: 'ค่าผ่อนรถ', amount: '', comment: '' },
-    { label: 'ค่าผ่อนสหกรณ์', amount: '', comment: '' },
-    { label: 'ค่าบัตรเครดิตสินเชื่อเงินสด', amount: '', comment: '' },
-    { label: 'ค่าผ่อนสินค้า', amount: '', comment: '' },
-    { label: 'ค่าไฟฟ้า', amount: '', comment: '' },
-    { label: 'ค่าอินเตอร์เน็ตบ้าน', amount: '', comment: '' },
-    { label: 'ค่าโทรศัพท์มือถือ', amount: '', comment: '' },
-    { label: 'จ่ายลูกไปโรงเรียน', amount: '', comment: '' },
-    { label: 'ค่าน้ำมัน', amount: '', comment: '' },
-  ]);
-
+  const [expenseItems, setExpenseItems] = useState<ExpenseItem[]>([]);
   const [newItem, setNewItem] = useState<ExpenseItem>({
     label: '',
     amount: '',
     comment: '',
   });
-
   const [dialogOpen, setDialogOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -53,7 +39,6 @@ const ExpensesForm:React.FC = () => {
   const { user, isLoggedIn } = useAuth();
   const userId = user?.userId;
 
- 
   const fetchExpenseItems = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
@@ -64,10 +49,11 @@ const ExpensesForm:React.FC = () => {
         const data = await response.json();
         setExpenseItems(data.items);
       } else {
-        throw new Error('Failed to fetch income items');
+        throw new Error('Failed to fetch expense items');
       }
     } catch (error) {
-      console.error('Error fetching Expense items:', error);
+      console.error('Error fetching expense items:', error);
+      setError('Failed to load expense items. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -76,8 +62,108 @@ const ExpensesForm:React.FC = () => {
   useEffect(() => {
     if (isLoggedIn && userId) {
       fetchExpenseItems();
+    } else {
+      setLoading(false);
     }
   }, [fetchExpenseItems, isLoggedIn, userId]);
+
+  const handleAmountChange = (index: number, value: string) => {
+    const updatedItems = [...expenseItems];
+    updatedItems[index].amount = value.replace(/,/g, '');
+    setExpenseItems(updatedItems);
+  };
+
+  const handleCommentChange = (index: number, value: string) => {
+    const updatedItems = [...expenseItems];
+    updatedItems[index].comment = value;
+    setExpenseItems(updatedItems);
+  };
+
+  const handleAddItem = async () => {
+    if (newItem.label && newItem.amount && userId) {
+      try {
+        const response = await fetch(`/api/expense-list/${userId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,
+            items: [...expenseItems, newItem],
+          }),
+        });
+        if (response.ok) {
+          console.log('New item added successfully');
+          setExpenseItems([...expenseItems, newItem]);
+          setNewItem({ label: '', amount: '', comment: '' });
+        } else {
+          throw new Error('Failed to add new item');
+        }
+      } catch (error) {
+        console.error('Error adding new item:', error);
+      }
+    }
+  };
+
+  const handleDeleteItem = async (index: number) => {
+    if (!userId) return;
+    try {
+      const response = await fetch(`/api/expense-list/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ index }),
+      });
+      if (response.ok) {
+        const updatedItems = expenseItems.filter((_, i) => i !== index);
+        setExpenseItems(updatedItems);
+        console.log('Item deleted successfully');
+      } else {
+        throw new Error('Failed to delete item');
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!userId) {
+      setDialogOpen(true);
+      return;
+    }
+    try {
+      const formattedDate = date.format('YYYY-MM-DD');
+      const itemsToSave = expenseItems.map(item => ({
+        ...item,
+        amount: item.amount ? parseFloat(item.amount) : 0
+      }));
+  
+      console.log('Saving items before sending:', itemsToSave);
+  
+      const response = await fetch(`/api/expense/${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: formattedDate,
+          items: itemsToSave,
+          userId: userId,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+  
+      if (response.ok) {
+        setSuccessDialogOpen(true);
+        fetchExpenseItems();
+      } else {
+        const errorData = await response.json();
+        console.error('Error response:', errorData);
+        throw new Error('Failed to save expenses');
+      }
+    } catch (error) {
+      console.error('Error saving expenses:', error);
+      setDialogOpen(true);
+    }
+  };
+
+  const handleCloseDialog = () => setDialogOpen(false);
+  const handleCloseSuccessDialog = () => setSuccessDialogOpen(false);
 
   if (loading) {
     return <div>Loading...</div>;
@@ -90,117 +176,6 @@ const ExpensesForm:React.FC = () => {
   if (!isLoggedIn || !userId) {
     return <div>Please log in to access this form.</div>;
   }
-
-
-  const handleAmountChange = (index: number, value: string) => {
-    const updatedItems = [...expenseItems];
-    updatedItems[index].amount = value.replace(/,/g, '');
-    setExpenseItems(updatedItems);
-  };
-
-  const formatAmount = (amount: string) => {
-    return amount ? amount.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
-  };
-
-  const handleCommentChange = (index: number, value: string) => {
-    const updatedItems = [...expenseItems];
-    updatedItems[index].comment = value;
-    setExpenseItems(updatedItems);
-  };
-
-  const handleAddItem = async () => {
-    if (newItem.label && newItem.amount && userId) {
-      setExpenseItems([...expenseItems, newItem]);
-      try {
-        const response = await fetch('/api/expense-list', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: userId,
-            items: [...expenseItems, newItem],
-          }),
-        });
-        if (response.ok) {
-          console.log('Expense list saved successfully');
-        } else {
-          console.error('Failed to save Expense list');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-      }
-      setNewItem({ label: '', amount: '', comment: '' });
-    }
-  };
-
-  const handleDeleteItem = async (index: number) => {
-    if (!userId) return;
-    try {
-      const updatedItems = expenseItems.filter((_, i) => i !== index);
-      setExpenseItems(updatedItems);
-      const response = await fetch(`/api/expense-list/${userId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ index }),
-      });
-      if (!response.ok) {
-        throw new Error('Failed to delete item');
-      }
-      console.log('Item deleted successfully');
-    } catch (error) {
-      console.error('Error deleting item:', error);
-      setExpenseItems([...expenseItems]);
-    }
-  };
-  
-
-  const handleSave = async () => {
-    if (!userId) {
-      setDialogOpen(true);
-      return;
-    }
-
-    try {
-      const formattedDate = date.format('YYYY-MM-DD');
-      const response = await fetch(`/api/expense/${userId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          date: formattedDate,
-          items: expenseItems,
-          userId: userId,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-
-      if (response.ok) {
-        setSuccessDialogOpen(true);
-        setExpenseItems([
-          { label: 'ค่าผ่อนบ้าน', amount: '', comment: '' },
-          { label: 'ค่าผ่อนรถ', amount: '', comment: '' },
-          { label: 'ค่าผ่อนสหกรณ์', amount: '', comment: '' },
-          { label: 'ค่าบัตรเครดิตสินเชื่อเงินสด', amount: '', comment: '' },
-          { label: 'ค่าผ่อนสินค้า', amount: '', comment: '' },
-          { label: 'ค่าไฟฟ้า', amount: '', comment: '' },
-          { label: 'ค่าอินเตอร์เน็ตบ้าน', amount: '', comment: '' },
-          { label: 'ค่าโทรศัพท์มือถือ', amount: '', comment: '' },
-          { label: 'จ่ายลูกไปโรงเรียน', amount: '', comment: '' },
-          { label: 'ค่าน้ำมัน', amount: '', comment: '' },
-        ]);
-      }
-    } catch (error) {
-      console.error('Error saving expenses:', error);
-      setDialogOpen(true);
-    }
-  };
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-  };
-
-  const handleCloseSuccessDialog = () => {
-    setSuccessDialogOpen(false);
-  };
-
   return (
     <Container component="main" maxWidth="sm">
       <Box sx={{ mt: 4, p: 2, border: '1px solid #ccc', borderRadius: 2 }}>
@@ -231,7 +206,7 @@ const ExpensesForm:React.FC = () => {
 
                   <TextField
                     label="จำนวนเงิน"
-                    value={formatAmount(item.amount)}
+                    value={item.amount}
                     onChange={(e) => handleAmountChange(index, e.target.value)}
                     fullWidth
                     sx={{ mr: 2, mt: 2 }}

@@ -16,6 +16,7 @@ export default async function handler(
   await dbConnect();
 
   const { userId } = req.query;
+  console.log('Received data in API:', JSON.stringify(req.body, null, 2));
 
   switch (req.method) {
     case 'GET':
@@ -48,18 +49,26 @@ export default async function handler(
 
     case 'POST':
       try {
-        const { date, expenseItems, timestamp } = req.body;
+        const { date, items, timestamp } = req.body;
+        console.log('Received data:', { date, items, timestamp });
+        if (!items || !Array.isArray(items)) {
+          return res.status(400).json({ error: 'Invalid or missing items data' });
+        }
+
         const newExpense = new Expense({
           userId,
           date,
           timestamp,
-          items: expenseItems,
+          items: items.map(item => ({
+            ...item,
+            amount: item.amount ? parseFloat(item.amount) : 0
+          }))
         });
         await newExpense.save();
-        res.status(200).json({ message: 'Expenses saved successfully' });
+        res.status(200).json({ message: 'Expense saved successfully' });
       } catch (error) {
         console.error('Error saving expense:', error);
-        res.status(500).json({ error: 'Failed to save expenses' });
+        res.status(500).json({ error: 'Failed to save expense' });
       }
       break;
 
