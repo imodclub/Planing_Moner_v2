@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '@/models/db';
 import mongoose from 'mongoose';
 import Saving from '@/models/savings.model';
-import { verifyAuth } from '@/lib/auth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -15,17 +14,17 @@ export default async function handler(
   await dbConnect();
 
   try {
-    // ตรวจสอบการยืนยันตัวตนและรับ userId
-    const user = await verifyAuth(req);
-    const userId = user.userId;
+    const { userId } = req.query;
+    if (!userId || Array.isArray(userId)) {
+      return res.status(400).json({ message: 'Invalid userId' });
+    }
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ message: 'Invalid userId format' });
     }
 
-    // ดึงข้อมูลเงินออมรายเดือน
     const monthlySavings = await Saving.aggregate([
-      { $match: { userId: new mongoose.Types.ObjectId(userId as string) } },
+      { $match: { userId: new mongoose.Types.ObjectId(userId) } },
       { $unwind: '$items' },
       {
         $group: {

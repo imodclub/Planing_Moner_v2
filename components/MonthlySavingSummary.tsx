@@ -83,13 +83,13 @@ const MonthlySavingSummary: React.FC = () => {
         >
           สรุปเงินออมรายเดือน
         </Typography>
-        <Grid2 container spacing={2}>
+        <Grid2 container rowSpacing={1} columnSpacing={{ xs: 1, sm: 2, md: 3 }}>
           {monthNames.map((month) => {
             const saving = monthlySavings.find((s) => s.month === month) || {
               total: 0,
             };
             return (
-              <Grid2 size={{ xs: 12, sm: 6, md: 4, lg: 3 }} key={month}>
+              <Grid2 size={6} key={month}>
                 <Box
                   sx={{
                     display: 'flex',

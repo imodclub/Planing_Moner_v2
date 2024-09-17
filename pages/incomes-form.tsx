@@ -29,11 +29,7 @@ interface IncomeItem {
 
 const IncomesForm: React.FC = () => {
   const [date, setDate] = useState<Dayjs>(dayjs());
-  const [incomeItems, setIncomeItems] = useState<IncomeItem[]>([
-    { label: 'เงินเดือน', amount: '', comment: '' },
-    { label: 'เงินปันผล, โบนัส', amount: '', comment: '' },
-    { label: 'รายได้เสริม', amount: '', comment: '' },
-  ]);
+  const [incomeItems, setIncomeItems] = useState<IncomeItem[]>([]);
   const [newItem, setNewItem] = useState<IncomeItem>({
     label: '',
     amount: '',
@@ -52,10 +48,15 @@ const IncomesForm: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/income-list/${userId}`);
+      const response = await fetch(`/api/incomes/${userId}`);
       if (response.ok) {
         const data = await response.json();
-        setIncomeItems(data.items);
+        if (data.incomes && data.incomes.length > 0) {
+          setIncomeItems(data.incomes[0].items);
+          setDate(dayjs(data.incomes[0].date));
+        } else {
+          setIncomeItems([]);
+        }
       } else {
         throw new Error('Failed to fetch income items');
       }
@@ -76,15 +77,15 @@ const IncomesForm: React.FC = () => {
   }, [fetchIncomeItems, isLoggedIn, userId]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <Typography>Loading...</Typography>;
   }
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return <Typography>Error: {error}</Typography>;
   }
 
   if (!isLoggedIn || !userId) {
-    return <div>Please log in to access this form.</div>;
+    return <Typography>Please log in to access this form.</Typography>;
   }
 
   const handleAmountChange = (index: number, value: string) => {
@@ -153,34 +154,26 @@ const IncomesForm: React.FC = () => {
   };
 
   const handleSave = async () => {
-    console.log('handleSave - Initial userId:', userId);
     if (!userId) {
       setDialogOpen(true);
       return;
     }
     try {
       const formattedDate = date.format('YYYY-MM-DD');
-      console.log('handleSave - Sending request with userId:', userId);
       const response = await fetch(`/api/incomes/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date: formattedDate,
           items: incomeItems,
-          userId: userId,
           timestamp: new Date().toISOString(),
         }),
       });
       if (response.ok) {
-        console.log('handleSave - Request successful for userId:', userId);
         setSuccessDialogOpen(true);
-        setIncomeItems([
-          { label: 'เงินเดือน', amount: '', comment: '' },
-          { label: 'โบนัส', amount: '', comment: '' },
-          { label: 'รายได้เสริม', amount: '', comment: '' },
-        ]);
+        fetchIncomeItems(); // Refresh the income items after saving
       } else {
-        console.log('handleSave - Request failed for userId:', userId);
+        throw new Error('Failed to save incomes');
       }
     } catch (error) {
       console.error('Error saving incomes:', error);

@@ -5,7 +5,6 @@ import mongoose from 'mongoose';
 import Income from '@/models/incomes.model';
 import Expense from '@/models/expenses.model';
 import Saving from '@/models/savings.model';
-import { verifyAuth } from '@/lib/auth';
 
 
 
@@ -21,8 +20,10 @@ export default async function handler(
 
   try {
     // ตรวจสอบการยืนยันตัวตนและรับ userId
-    const user = await verifyAuth(req);
-    const userId = user.userId;
+    const { userId } = req.query;
+    if (!userId || Array.isArray(userId)) {
+      return res.status(400).json({ message: 'Invalid userId' });
+    }
 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ message: 'Invalid userId format' });
