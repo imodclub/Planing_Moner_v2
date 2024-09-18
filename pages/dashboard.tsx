@@ -11,6 +11,7 @@ import AnnualFinancialSummaryChart from '@/components/AnnualFinancialSummaryChar
 import MonthlyIncomeSummary from '@/components/MonthlyIncomeSummary';
 import MonthlyExpenseSummary from '@/components/MonthlyExpenseSummary';
 import MonthlySavingSummary from '@/components/MonthlySavingSummary';
+import ShortFinancialSummaryReport from '@/components/ShortFinancialSummaryReport';
 
 
 
@@ -36,6 +37,11 @@ function Dashboard() {
         <Box>
           <Typography variant="h4" component="h1" gutterBottom>
             รายงานรายรับ-รายจ่าย และเงินออมของคุณ
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="h6" component="h1" gutterBottom>
+            <ShortFinancialSummaryReport />
           </Typography>
         </Box>
         <Box>

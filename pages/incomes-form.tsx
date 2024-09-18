@@ -48,7 +48,7 @@ const IncomesForm: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/incomes/${userId}`);
+      const response = await fetch(`/api/incomes/${userId}?showAmounts=false`);
       if (response.ok) {
         const data = await response.json();
         if (data.incomes && data.incomes.length > 0) {

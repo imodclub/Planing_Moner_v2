@@ -34,41 +34,25 @@ export default async function handler(
   }
 }
 
-async function handleGet(
-  req: NextApiRequest,
-  res: NextApiResponse,
-  userId: string
-) {
+async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: string) {
   try {
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ message: 'รูปแบบ userId ไม่ถูกต้อง' });
     }
 
-    const { showAmounts } = req.query; // เพิ่มการรับค่า showAmounts จาก query
     const userIncomes = await Income.find({ userId: userId });
-
     if (!userIncomes || userIncomes.length === 0) {
-      return res
-        .status(200)
-        .json({
-          incomes: [
-            {
-              date: new Date().toISOString().split('T')[0],
-              items: defaultIncomeItems,
-            },
-          ],
-        });
+      return res.status(200).json({ incomes: [{ date: new Date().toISOString().split('T')[0], items: defaultIncomeItems }] });
     }
 
     const formattedIncomes = userIncomes.map((income) => ({
       date: income.date,
       items: income.items.map((item: IncomeItem) => ({
         label: item.label,
-        amount: showAmounts === 'true' ? item.amount || '' : '',
-        comment: showAmounts === 'true' ? item.comment || '' : '',
+        amount:  '',
+        comment:  '',
       })),
     }));
-
     return res.status(200).json({ incomes: formattedIncomes });
   } catch (error) {
     console.error('เกิดข้อผิดพลาดในการดึงข้อมูลรายรับของผู้ใช้:', error);
