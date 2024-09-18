@@ -23,7 +23,7 @@ export default function Login() {
 
   useEffect(() => {
     if (isLoggedIn) {
-      router.replace('/dashboard');
+      router.push('/dashboard');
     }
   }, [isLoggedIn, router]);
 
@@ -33,7 +33,6 @@ export default function Login() {
     setLoading(true);
 
     try {
-      console.log('Login attempt started with email:', email);
       await login(email, password);
       console.log('Login successful');
     } catch (error) {

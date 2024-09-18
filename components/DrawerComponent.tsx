@@ -14,6 +14,7 @@ import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
 import SavingsIcon from '@mui/icons-material/Savings';
 import LogoutIcon from '@mui/icons-material/Logout';
+import { Summarize } from '@mui/icons-material';
 
 const StyledButton = styled(Button)(({ theme }) => ({
   justifyContent: 'flex-start',
@@ -31,10 +32,20 @@ const DrawerComponent: React.FC = () => {
 
   const menuItems = [
     { text: 'หน้าแรกผู้ใช้', icon: <DashboardIcon />, href: '/dashboard' },
-    { text: 'บันทึกรายรับ', icon: <AddCircleOutlineIcon />, href: '/incomes-form' },
-    { text: 'บันทึกรายจ่าย', icon: <RemoveCircleOutlineIcon />, href: '/expenses-form' },
+    {
+      text: 'บันทึกรายรับ',
+      icon: <AddCircleOutlineIcon />,
+      href: '/incomes-form',
+    },
+    {
+      text: 'บันทึกรายจ่าย',
+      icon: <RemoveCircleOutlineIcon />,
+      href: '/expenses-form',
+    },
     { text: 'บันทึกเงินออม', icon: <SavingsIcon />, href: '/savings-form' },
+    { text: 'รายงาน', icon: <Summarize />, href: '/' },
   ];
+  
 
   const drawerList = () => (
     <Box

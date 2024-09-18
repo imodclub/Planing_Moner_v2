@@ -42,8 +42,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('AuthContext - isLoggedIn updated:', isLoggedIn);
-    console.log('AuthContext - user updated:', user);
   }, [isLoggedIn, user]);
 
   const login = async (email: string, password: string) => {

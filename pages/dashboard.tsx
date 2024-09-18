@@ -20,8 +20,6 @@ function Dashboard() {
   const router = useRouter(); // ใช้ useRouter
 
   useEffect(() => {
-    console.log('Dashboard - user:', user);
-    console.log('Dashboard - isLoggedIn:', isLoggedIn);
     if (!isLoggedIn || !user) {
       router.push('/login');
     }
