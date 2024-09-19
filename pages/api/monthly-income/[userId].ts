@@ -28,9 +28,29 @@ export default async function handler(
       { $unwind: '$items' },
       {
         $group: {
-          _id: { $month: '$date' },
+          _id: {
+            month: { $month: '$date' },
+            label: '$items.label'
+          },
           total: { $sum: { $toDouble: '$items.amount' } },
         },
+      },
+      {
+        $match: {
+          total: { $gt: 0 } // กรองเฉพาะรายการที่มียอดมากกว่า 0
+        }
+      },
+      {
+        $group: {
+          _id: '$_id.month',
+          items: {
+            $push: {
+              label: '$_id.label',
+              amount: { $round: ['$total', 0] } // ปัดเศษให้เป็นจำนวนเต็ม
+            }
+          },
+          total: { $sum: '$total' }
+        }
       },
       {
         $project: {
@@ -40,24 +60,15 @@ export default async function handler(
               vars: {
                 monthsInString: [
                   '',
-                  'มกราคม',
-                  'กุมภาพันธ์',
-                  'มีนาคม',
-                  'เมษายน',
-                  'พฤษภาคม',
-                  'มิถุนายน',
-                  'กรกฎาคม',
-                  'สิงหาคม',
-                  'กันยายน',
-                  'ตุลาคม',
-                  'พฤศจิกายน',
-                  'ธันวาคม',
+                  'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                  'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
                 ],
               },
               in: { $arrayElemAt: ['$$monthsInString', '$_id'] },
             },
           },
-          total: 1,
+          items: 1,
+          total: { $round: ['$total', 0] } // ปัดเศษยอดรวมให้เป็นจำนวนเต็ม
         },
       },
       { $sort: { _id: 1 } },

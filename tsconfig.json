@@ -21,6 +21,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["global.d.ts","next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/page.tsx.old"],
+  "include": ["global.d.ts","next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/page.tsx.old", "pages/report-expensetsx"],
   "exclude": ["node_modules"]
 }
