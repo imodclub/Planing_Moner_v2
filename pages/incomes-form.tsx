@@ -48,12 +48,16 @@ const IncomesForm: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`/api/incomes/${userId}?showAmounts=false`);
+      const response = await fetch(`/api/income-list/${userId}`);
       if (response.ok) {
         const data = await response.json();
-        if (data.incomes && data.incomes.length > 0) {
-          setIncomeItems(data.incomes[0].items);
-          setDate(dayjs(data.incomes[0].date));
+        console.log("ข้อมูลที่ได้รับจาก API:", data);
+  
+        if (data.items && Array.isArray(data.items)) {
+          setIncomeItems(data.items);
+          if (data.createdAt) {
+            setDate(dayjs(data.createdAt));
+          }
         } else {
           setIncomeItems([]);
         }
@@ -111,9 +115,8 @@ const IncomesForm: React.FC = () => {
 
   const handleAddItem = async () => {
     if (newItem.label && newItem.amount && userId) {
-      setIncomeItems([...incomeItems, newItem]);
       try {
-        const response = await fetch('/api/income-list', {
+        const response = await fetch(`/api/income-list/${userId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -123,13 +126,14 @@ const IncomesForm: React.FC = () => {
         });
         if (response.ok) {
           console.log('Income list saved successfully');
+          setIncomeItems([...incomeItems, newItem]);
+          setNewItem({ label: '', amount: '', comment: '' });
         } else {
           console.error('Failed to save income list');
         }
       } catch (error) {
         console.error('Error:', error);
       }
-      setNewItem({ label: '', amount: '', comment: '' });
     }
   };
 
