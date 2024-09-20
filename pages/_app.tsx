@@ -39,6 +39,7 @@ function AuthWrapper({ children }: { children: React.ReactNode }) {
       !loading &&
       !isLoggedIn &&
       router.pathname !== '/' &&
+      router.pathname !== '/sign-up' &&
       router.pathname !== '/login'
     ) {
       router.replace('/login');

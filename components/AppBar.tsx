@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
@@ -20,11 +20,34 @@ import Cookies from 'js-cookie';
 
 
 
+
 const MyAppBar: React.FC = () => {
   const router = useRouter();
-  const { isLoggedIn, logout } = useAuth();
+  const { isLoggedIn, logout, user } = useAuth();
   const { toggleDrawer } = useDrawer();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
+  const userId=user?.userId
+ 
+  useEffect(() => {
+    const fetchUserName = async () => {
+      if (userId) {
+        try {
+          const response = await fetch(`/api/get-user-name/${userId}`);
+          if (response.ok) {
+            const data = await response.json();
+            setUserName(data.name);
+          } else {
+            console.error('Failed to fetch user name');
+          }
+        } catch (error) {
+          console.error('Error fetching user name:', error);
+        }
+      }
+    };
+
+    fetchUserName();
+  }, [userId]);
 
   const handleToggleDrawer = () => {
     if (isLoggedIn) {
@@ -80,6 +103,11 @@ const MyAppBar: React.FC = () => {
               โปรแกรมรายรับรายจ่าย
             </Button>
           </Typography>
+          {isLoggedIn && userName && (
+            <Typography variant="subtitle1" sx={{ mr: 2 }}>
+              คุณ {userName} กำลังใช้งาน
+            </Typography>
+          )}
           <Button
             color="inherit"
             onClick={isLoggedIn ? handleLogout : handleLogin}
