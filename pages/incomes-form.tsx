@@ -51,15 +51,9 @@ const IncomesForm: React.FC = () => {
       const response = await fetch(`/api/income-list/${userId}`);
       if (response.ok) {
         const data = await response.json();
-        console.log("ข้อมูลที่ได้รับจาก API:", data);
-  
-        if (data.items && Array.isArray(data.items)) {
-          setIncomeItems(data.items);
-          if (data.createdAt) {
-            setDate(dayjs(data.createdAt));
-          }
-        } else {
-          setIncomeItems([]);
+        setIncomeItems(data.items || []);
+        if (data.createdAt) {
+          setDate(dayjs(data.createdAt));
         }
       } else {
         throw new Error('Failed to fetch income items');

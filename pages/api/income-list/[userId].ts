@@ -5,15 +5,15 @@ import mongoose from 'mongoose';
 
 interface IncomeItem {
   label: string;
-  amount: string;
+  amount: number;
   comment: string;
 }
 
 const defaultItems: IncomeItem[] = [
-  { label: 'เงินเดือน', amount: '', comment: '' },
-  { label: 'รายได้เสริม', amount: '', comment: '' },
-  { label: 'ดอกเบี้ยและเงินปันผล', amount: '', comment: '' },
-  { label: 'รายได้จากการถูกล็อตเตอรี่/หวย', amount: '', comment: '' },
+  { label: 'เงินเดือน', amount: 0, comment: '' },
+  { label: 'รายได้เสริม', amount: 0, comment: '' },
+  { label: 'ดอกเบี้ยและเงินปันผล', amount: 0, comment: '' },
+  { label: 'รายได้จากการถูกล็อตเตอรี่/หวย', amount: 0, comment: '' },
 ];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -43,26 +43,20 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse, userId: stri
       .sort({ _id: -1 })
       .select('items createdAt _id');
 
-    if (!latestIncomeList) {
-      console.log("No income list found, creating default list");
-      const newIncomeList = new IncomeList({
-        userId,
-        items: defaultItems,
-        timestamp: new Date(),
-      });
-      latestIncomeList = await newIncomeList.save();
-    }
+      if (!latestIncomeList) {
+        console.log("No income list found, creating default list");
+        const newIncomeList = new IncomeList({
+          userId,
+          items: defaultItems,
+          timestamp: new Date(),
+        });
+        latestIncomeList = await newIncomeList.save();
+      }
 
-    const itemsWithLabel = latestIncomeList.items.length > 0
-  ? latestIncomeList.items.map((item: IncomeItem) => ({
+    const itemsWithLabel = latestIncomeList.items.map((item: IncomeItem) => ({
       label: item.label,
       amount: '',
       comment: item.comment ?? '',
-    }))
-  : defaultItems.map(item => ({
-      label: item.label,
-      amount: '',
-      comment: item.comment,
     }));
 
     console.log("Sending response:", {
